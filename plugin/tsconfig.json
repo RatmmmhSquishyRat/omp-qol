@@ -1,0 +1,24 @@
+{
+	"compilerOptions": {
+		"target": "ESNext",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"lib": ["ESNext"],
+		"types": ["bun"],
+		"strict": true,
+		"noEmit": true,
+		"skipLibCheck": true,
+		"paths": {
+			"@oh-my-pi/pi-coding-agent": [
+				"../../../ref_repos/oh-my-pi/packages/coding-agent/src/index.ts"
+			],
+			"@oh-my-pi/pi-coding-agent/*": [
+				"../../../ref_repos/oh-my-pi/packages/coding-agent/src/*"
+			],
+			"@oh-my-pi/pi-tui": [
+				"../../../ref_repos/oh-my-pi/packages/tui/src/index.ts"
+			]
+		}
+	},
+	"include": ["src"]
+}

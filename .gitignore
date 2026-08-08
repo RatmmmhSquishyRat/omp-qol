@@ -1,0 +1,14 @@
+# dependencies
+node_modules/
+
+# generated delivery artifacts — regenerate with `bun .sandbox/install-plugin.ts`
+# (contains machine-absolute installPath and a Windows junction; never commit)
+test-workspace/.omp/
+
+# sandbox runtime noise
+.sandbox/scratch/
+*.log
+
+# editor / OS noise
+.DS_Store
+Thumbs.db

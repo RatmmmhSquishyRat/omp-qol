@@ -1,0 +1,7 @@
+# dependencies
+node_modules/
+
+# editor / OS noise
+.DS_Store
+Thumbs.db
+*.log

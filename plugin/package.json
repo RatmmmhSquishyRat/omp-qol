@@ -1,0 +1,48 @@
+{
+  "name": "omp-qol-plugin",
+  "version": "0.3.0",
+  "description": "Quality-of-life plugin for the omp (Oh My Pi) coding agent: agent goal tool + agent-controlled plan/vibe modes",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "test": "bun test test/goal-tool.test.ts && bun test test/mode-tool.test.ts && bun test test/host-bridge.test.ts && bun test test/integration-real-session.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "omp",
+    "oh-my-pi",
+    "plugin",
+    "coding-agent",
+    "qol"
+  ],
+  "omp": {
+    "extensions": [
+      "./src/main.ts"
+    ],
+    "settings": {
+      "greeting": {
+        "type": "string",
+        "default": "omp-qol ready.",
+        "description": "Notification text shown when a session starts"
+      },
+      "notifyOnSessionStart": {
+        "type": "boolean",
+        "default": true,
+        "description": "Show the greeting notification on session start"
+      },
+      "goalToolEnabled": {
+        "type": "boolean",
+        "default": true,
+        "description": "Register the always-available agent goal tool (QOL-001)"
+      },
+      "modeToolEnabled": {
+        "type": "boolean",
+        "default": true,
+        "description": "Register the agent-controlled plan/vibe mode tool (QOL-002/003)"
+      }
+    }
+  },
+  "devDependencies": {
+    "zod": "4.4.3"
+  }
+}
