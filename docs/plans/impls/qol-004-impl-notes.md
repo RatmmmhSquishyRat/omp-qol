@@ -18,6 +18,7 @@
 | `plugin/test/advisor-tool.test.ts` | New: L1 mock tests (28 cases, A1–A18) | Created |
 | `plugin/test/advisor-integration.test.ts` | New: L3 real-session tests (10 cases, I1–I9 + bridge reach) | Created |
 | `.sandbox/verify-workspace.ts` | Updated L4 to recognize `advisor` tool + 10-op schema check | Modified |
+| `.sandbox/e2e-workspace-advisor.ts` | L6 delivery-form e2e: installed omp + real LLM, 6 ops | Created |
 
 ---
 
@@ -73,7 +74,31 @@ Proven by L1 A4: `setAdvisorEnabled` is called, then the function returns. No `d
 | F5 | Mutate while disabled; file persists; enable starts latest | A14, I5 | PASS |
 | F6 | Unknown tool; existing roster untouched | A8, I6 | PASS |
 | F7 | File survives new session | I7 | PASS |
-| F8 | Real LLM e2e (optional) | E2E-advisor | not run |
+| F8 | Real LLM e2e (optional) | `.sandbox/e2e-workspace-advisor.ts` | **PASS 2026-08-15** |
+
+### L6 delivery-form use-through (2026-08-15)
+
+This is the path that was missing from the first impl report. It is **not** L1/L3.
+
+- **Host**: installed `omp` (`C:\Users\15480\.bun\bin\omp.exe`), `--mode rpc`
+- **Workspace**: throwaway git repo under `.sandbox/scratch/e2e-advisor-ws-*` (gitignored). `repo.root()` therefore does not resolve to omp-qol. Project `WATCHDOG.yml` stayed in scratch; no write to developer `~/.omp`.
+- **Model**: `zai/glm-4.5-flash` (live `get_available_models` → ranked cheap pool; first cursor-nano attempt earlier in the session failed with `Connect error not_found` and never called the tool)
+- **Driver**: the model was prompted to call `advisor` exactly once per turn. Assertions are on `tool_execution_end` text, not on the model's chat reply.
+- **Result**: **6/6 PASS**, `isError=false` on every step. Wall time ~245s.
+
+| Step | op | What actually happened |
+|---|---|---|
+| 1 | `status` | Host already had a merged user-scope advisor `default` (`kimi-code/k3`) running. Tool returned `Advisor is enabled … configured: true`. Session flag was already on before we wrote anything. |
+| 2 | `enable` | `setAdvisorEnabled(true) returned true. enabled=true active=true`. No discover (live-only op). |
+| 3 | `upsert` name=`E2EReviewer` | `persisted: true`, `applied: true`, `effectiveAt: immediate`. Source = scratch `WATCHDOG.yml`, not `~/.omp`. |
+| 4 | `list` scope=`effective` | After merge: **1** advisor, `E2EReviewer` with the e2e instructions. Project leaf hid user `default`. |
+| 5 | `remove` name=`E2EReviewer` | `persisted: true`, `applied: true`, same scratch source. Project entry gone. |
+| 6 | `disable` | `setAdvisorEnabled(false) returned false. enabled=false active=false`. |
+
+First-attempt gaps (so this is not silently rewritten as “always green”):
+- Cursor `gpt-5.4-nano-high` was a dead model (`not_found`); the turn ended with **zero** `advisor` calls. That is not a use-through.
+- An intermediate run called `enable` successfully (`Advisor enabled. … enabled=true active=true`) but the harness regex looked for JSON `"enabled": true` and falsely failed. The tool itself worked.
+- `remove` once matched against the outer stringified RPC frame (`\"persisted\": true`) and falsely failed; the tool had already persisted. Matcher now reads `result.content[].text`.
 
 ---
 
