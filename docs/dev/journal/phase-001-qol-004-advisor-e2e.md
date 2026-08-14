@@ -1,6 +1,6 @@
 # Phase 001: QOL-004 advisor L6 use-through
 
-**commit**: `475dfbd` `test: run advisor L6 use-through on installed omp and record what the tool actually returned`
+**commit**: `475dfbd`, `49ea863` `fix: standardize advisor tool structured JSON outputs and enforce strict e2e assertions`
 **date**: 2026-08-15
 
 ## Problem / Background

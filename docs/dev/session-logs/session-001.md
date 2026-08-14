@@ -1,7 +1,7 @@
 # Session 001: QOL-004 advisor docs
 
 **date**: 2026-08-15
-**commits**: `dda148b`, `475dfbd`
+**commits**: `dda148b`, `475dfbd`, `49ea863`
 
 ## Turn 1
 
@@ -115,4 +115,6 @@
 - 修复 `plugin/test/advisor-tool.test.ts`：更新 L1 单元测试断言结构化字段，全套 85 个单元/集成测试全绿（28 L1 + 10 L3 + 47 regression）。
 - 修复 `.sandbox/e2e-workspace-advisor.ts`：严格断言每个 step 的结构化字段（`"op": "status"`, `"op": "enable"`, `"op": "upsert"`, `"op": "list"`, `"op": "remove"`, `"op": "disable"`），安全隔离临时测试环境，不触碰任何系统其他进程。
 - 实机运行 L6 delivery-form e2e use-through 完整通过（6/6 PASS，真实模型 `zai/glm-4.5-flash`，安装版 `omp --mode rpc`）。
+
+**commit**: `49ea863`
 
