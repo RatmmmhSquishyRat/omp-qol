@@ -1,7 +1,7 @@
 # Session 001: QOL-004 advisor docs
 
 **date**: 2026-08-15
-**commits**: `dda148b`
+**commits**: `dda148b`, `475dfbd`
 
 ## Turn 1
 
@@ -99,3 +99,5 @@
 - 对齐断言到工具正文（`enable`/`disable` 是自然语言；`remove` 的 `"persisted": true` 不能拿外层 RPC JSON 去匹配）。
 - 重跑 L6：`zai/glm-4.5-flash`，6/6 PASS（status → enable → upsert E2EReviewer → list effective → remove → disable）。upsert/remove 的 `source` 是 scratch `WATCHDOG.yml`。
 - 把实际返回写进 `docs/plans/impls/qol-004-impl-notes.md` F8；补 journal。
+
+**commit**: `475dfbd`
