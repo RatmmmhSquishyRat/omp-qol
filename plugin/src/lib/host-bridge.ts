@@ -14,6 +14,21 @@
  * returns `null`.
  */
 
+/** Minimal advisor stat as returned by getAdvisorStats(). */
+export interface LiveAdvisorStat {
+	name: string;
+	status: string;
+	model?: { id?: string; provider?: string } | string | unknown;
+	tools?: string[];
+}
+
+/** Minimal shape returned by session.getAdvisorStats(). */
+export interface LiveAdvisorStats {
+	configured: boolean;
+	active: boolean;
+	advisors: LiveAdvisorStat[];
+}
+
 export interface LiveHostSession {
 	getPlanModeState?(): { enabled?: boolean; planFilePath?: string } | undefined;
 	setPlanModeState?(state: unknown): void;
@@ -37,7 +52,18 @@ export interface LiveHostSession {
 		getSessionId(): string | null;
 		getSessionFile(): string | null;
 		appendModeChange(mode: string, modeData?: Record<string, unknown>): void;
+		getCwd?(): string;
 	};
+	// -- Advisor surface (QOL-004) -------------------------------------------
+	// Declared as optional: a session that exposes plan/vibe but not advisor
+	// methods must refuse advisor ops only (split sanity — ADR-005 §Decision 6).
+	applyAdvisorConfigs?(advisors: Array<{ name: string; model?: string; tools?: string[]; instructions?: string; enabled?: boolean }>, sharedInstructions: string | undefined): number;
+	setAdvisorEnabled?(enabled: boolean): boolean;
+	isAdvisorEnabled?(): boolean;
+	isAdvisorActive?(): boolean;
+	getAdvisorStats?(): LiveAdvisorStats;
+	formatAdvisorStatus?(): string;
+	formatAdvisorHistoryAsText?(options?: { compact?: boolean }): string | null;
 }
 
 export interface VibeRegistryLike {
@@ -88,6 +114,25 @@ export type HostRootSurface = {
 	VibeListTool?: new (session: Record<string, unknown>) => VibeListToolLike;
 	VibeKillTool?: new (session: Record<string, unknown>) => VibeKillToolLike;
 };
+
+/**
+ * True when the session exposes the full advisor method surface (QOL-004).
+ *
+ * Intentionally independent of the plan/vibe sanity check: a session that
+ * can drive plan/vibe but lacks advisor methods must refuse advisor ops only
+ * — it must not null the whole bridge (ADR-005 §Decision 6).
+ */
+export function sessionHasAdvisorSurface(session: LiveHostSession): boolean {
+	return (
+		typeof session.applyAdvisorConfigs === "function" &&
+		typeof session.setAdvisorEnabled === "function" &&
+		typeof session.isAdvisorEnabled === "function" &&
+		typeof session.isAdvisorActive === "function" &&
+		typeof session.getAdvisorStats === "function" &&
+		typeof session.formatAdvisorStatus === "function" &&
+		typeof session.formatAdvisorHistoryAsText === "function"
+	);
+}
 
 /**
  * Resolve the live host session, or null when no live main session exists.

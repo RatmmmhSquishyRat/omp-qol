@@ -94,24 +94,30 @@ while (true) {
 			console.log(`[verify-workspace] dumpTools names: ${tools.map(t => t.name).join(", ")}`);
 			const goal = tools.find(t => t.name === "goal");
 			const mode = tools.find(t => t.name === "mode");
+			const advisor = tools.find(t => t.name === "advisor");
 			if (CONTROL) {
-				verdict = goal === undefined && mode === undefined;
+				verdict = goal === undefined && mode === undefined && advisor === undefined;
 				console.log(
-					`[verify-workspace] control: goal ${goal ? "PRESENT (unexpected)" : "absent (expected)"}, mode ${mode ? "PRESENT (unexpected)" : "absent (expected)"}`,
+					`[verify-workspace] control: goal ${goal ? "PRESENT (unexpected)" : "absent (expected)"}, mode ${mode ? "PRESENT (unexpected)" : "absent (expected)"}, advisor ${advisor ? "PRESENT (unexpected)" : "absent (expected)"}`,
 				);
 			} else {
 				const goalOurs = goal !== undefined && (goal.description ?? "").includes("[qol]");
 				const modeOurs = mode !== undefined && (mode.description ?? "").includes("[qol]");
+				const advisorOurs = advisor !== undefined && (advisor.description ?? "").includes("[qol]");
 				// Model-side schema check: the advertised ops must be visible to the
 				// model. Installed hosts serialize zod into JSON-schema parameters;
 				// the source host may dump parameters differently, so accept ops
 				// present in either surface.
-				const haystack = `${JSON.stringify(mode?.parameters ?? {})} ${mode?.description ?? ""}`;
-				const expectedOps = ["plan_enter", "plan_exit", "vibe_enter", "vibe_exit", "status"];
-				const schemaOk = expectedOps.every(op => haystack.includes(op));
-				verdict = goalOurs && modeOurs && schemaOk;
+				const modeHaystack = `${JSON.stringify(mode?.parameters ?? {})} ${mode?.description ?? ""}`;
+				const expectedModeOps = ["plan_enter", "plan_exit", "vibe_enter", "vibe_exit", "status"];
+				const modeSchemaOk = expectedModeOps.every(op => modeHaystack.includes(op));
+				// Advisor: 10 ops must appear in schema or description
+				const advisorHaystack = `${JSON.stringify(advisor?.parameters ?? {})} ${advisor?.description ?? ""}`;
+				const expectedAdvisorOps = ["list", "get", "upsert", "remove", "set_shared", "apply", "enable", "disable", "status", "dump"];
+				const advisorSchemaOk = expectedAdvisorOps.every(op => advisorHaystack.includes(op));
+				verdict = goalOurs && modeOurs && modeSchemaOk && advisorOurs && advisorSchemaOk;
 				console.log(
-					`[verify-workspace] project-scoped load: goal ${goalOurs ? "present [qol]" : "MISSING/UNMARKED"}, mode ${modeOurs ? "present [qol]" : "MISSING/UNMARKED"}, schema ${schemaOk ? "carries all 5 ops" : "MISSING OPS"}`,
+					`[verify-workspace] project-scoped load: goal ${goalOurs ? "present [qol]" : "MISSING/UNMARKED"}, mode ${modeOurs ? "present [qol]" : "MISSING/UNMARKED"}, schema ${modeSchemaOk ? "carries all 5 ops" : "MISSING OPS"}, advisor ${advisorOurs ? "present [qol]" : "MISSING/UNMARKED"}, advisor-schema ${advisorSchemaOk ? "carries all 10 ops" : "MISSING OPS"}`,
 				);
 			}
 			break;

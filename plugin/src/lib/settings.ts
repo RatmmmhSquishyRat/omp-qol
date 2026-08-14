@@ -8,6 +8,7 @@ export const DEFAULT_SETTINGS = {
 	notifyOnSessionStart: true,
 	goalToolEnabled: true,
 	modeToolEnabled: true,
+	advisorToolEnabled: true,
 };
 
 export interface QolSettings {
@@ -15,6 +16,7 @@ export interface QolSettings {
 	notifyOnSessionStart: boolean;
 	goalToolEnabled: boolean;
 	modeToolEnabled: boolean;
+	advisorToolEnabled: boolean;
 }
 
 /**
@@ -71,6 +73,8 @@ function coerce(raw: Record<string, unknown>): QolSettings {
 			typeof raw.goalToolEnabled === "boolean" ? raw.goalToolEnabled : DEFAULT_SETTINGS.goalToolEnabled,
 		modeToolEnabled:
 			typeof raw.modeToolEnabled === "boolean" ? raw.modeToolEnabled : DEFAULT_SETTINGS.modeToolEnabled,
+		advisorToolEnabled:
+			typeof raw.advisorToolEnabled === "boolean" ? raw.advisorToolEnabled : DEFAULT_SETTINGS.advisorToolEnabled,
 	};
 }
 

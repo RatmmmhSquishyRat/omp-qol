@@ -1,4 +1,5 @@
 import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
+import { registerAdvisorTool } from "./advisor-tool";
 import { registerGoalTool } from "./goal-tool";
 import { loadSettings } from "./lib/settings";
 import { registerModeTool } from "./mode-tool";
@@ -43,11 +44,19 @@ export default async function ompQolPlugin(pi: ExtensionAPI): Promise<void> {
 		pi.logger.info("[omp-qol] mode tool disabled by setting modeToolEnabled=false");
 	}
 
+	// -- QOL-004: agent-facing advisor tool ----------------------------------
+	if (bootSettings.advisorToolEnabled) {
+		registerAdvisorTool(pi);
+		pi.logger.info("[omp-qol] advisor tool registered");
+	} else {
+		pi.logger.info("[omp-qol] advisor tool disabled by setting advisorToolEnabled=false");
+	}
+
 	// -- Session lifecycle ---------------------------------------------------
 	pi.on("session_start", async (_event, ctx) => {
 		const settings = await loadSettings(PLUGIN_NAME, ctx.cwd);
 		pi.logger.info(
-			`[omp-qol] settings: greeting=${JSON.stringify(settings.greeting)} notifyOnSessionStart=${settings.notifyOnSessionStart} goalToolEnabled=${settings.goalToolEnabled} modeToolEnabled=${settings.modeToolEnabled}`,
+			`[omp-qol] settings: greeting=${JSON.stringify(settings.greeting)} notifyOnSessionStart=${settings.notifyOnSessionStart} goalToolEnabled=${settings.goalToolEnabled} modeToolEnabled=${settings.modeToolEnabled} advisorToolEnabled=${settings.advisorToolEnabled}`,
 		);
 		if (settings.notifyOnSessionStart) {
 			ctx.ui.notify(settings.greeting, "info");
@@ -78,6 +87,7 @@ export default async function ompQolPlugin(pi: ExtensionAPI): Promise<void> {
 				`notifyOnSessionStart = ${settings.notifyOnSessionStart}`,
 				`goalToolEnabled = ${settings.goalToolEnabled}`,
 				`modeToolEnabled = ${settings.modeToolEnabled}`,
+				`advisorToolEnabled = ${settings.advisorToolEnabled}`,
 				"",
 				"Change with: omp plugin config set omp-qol-plugin <key> <value>",
 			];

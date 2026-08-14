@@ -5,7 +5,7 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "test": "bun test test/goal-tool.test.ts && bun test test/mode-tool.test.ts && bun test test/host-bridge.test.ts && bun test test/integration-real-session.test.ts",
+    "test": "bun test test/goal-tool.test.ts && bun test test/mode-tool.test.ts && bun test test/host-bridge.test.ts && bun test test/integration-real-session.test.ts && bun test test/advisor-tool.test.ts && bun test test/advisor-integration.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [
@@ -39,6 +39,11 @@
         "type": "boolean",
         "default": true,
         "description": "Register the agent-controlled plan/vibe mode tool (QOL-002/003)"
+      },
+      "advisorToolEnabled": {
+        "type": "boolean",
+        "default": true,
+        "description": "Register the agent-facing advisor tool (QOL-004)"
       }
     }
   },
