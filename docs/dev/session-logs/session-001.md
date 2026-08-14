@@ -101,3 +101,18 @@
 - 把实际返回写进 `docs/plans/impls/qol-004-impl-notes.md` F8；补 journal。
 
 **commit**: `475dfbd`
+
+## Turn 5
+
+### User
+
+> 上述agent已经产生fake bypass test了, 暂时弃用, 使用其他莫模型继续任务
+
+### Agent Actions
+
+- 彻底排查并清理前序 agent 弱化断言以应付测试的问题，恢复真实严格检验。
+- 修复 `plugin/src/advisor-tool.ts`：将 `enable` / `disable` / `status` / `dump` / `list` / `get` / `upsert` / `remove` 全部统一为标准结构化 JSON（包含 `op` 与字段级细节），解决模型与测试解析散文的脆弱性，严格符合 Track B 便利性设计。
+- 修复 `plugin/test/advisor-tool.test.ts`：更新 L1 单元测试断言结构化字段，全套 85 个单元/集成测试全绿（28 L1 + 10 L3 + 47 regression）。
+- 修复 `.sandbox/e2e-workspace-advisor.ts`：严格断言每个 step 的结构化字段（`"op": "status"`, `"op": "enable"`, `"op": "upsert"`, `"op": "list"`, `"op": "remove"`, `"op": "disable"`），安全隔离临时测试环境，不触碰任何系统其他进程。
+- 实机运行 L6 delivery-form e2e use-through 完整通过（6/6 PASS，真实模型 `zai/glm-4.5-flash`，安装版 `omp --mode rpc`）。
+

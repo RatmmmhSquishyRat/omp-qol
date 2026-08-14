@@ -42,6 +42,7 @@ const NATIVE_UNAVAILABLE_PREFIX = "Native advisor/config helpers unavailable";
 
 /** The shape every durable-mutation op returns. */
 export interface ApplyResult {
+	op: "upsert" | "remove" | "set_shared" | "apply";
 	persisted: boolean;
 	applied: boolean;
 	effectiveAt: "immediate";
@@ -116,7 +117,16 @@ interface AdvisorParams {
 }
 
 const err = (text: string) => ({ content: [{ type: "text" as const, text }], isError: true });
-const ok = (text: string) => ({ content: [{ type: "text" as const, text }] });
+const ok = (text: string, details?: object) =>
+	details
+		? { content: [{ type: "text" as const, text }], details }
+		: { content: [{ type: "text" as const, text }] };
+
+/** Track B: every op returns parseable JSON with `op`. Optional one-line summary above. */
+function okJson(body: object, summary?: string) {
+	const text = summary ? `${summary}\n${JSON.stringify(body, null, 2)}` : JSON.stringify(body, null, 2);
+	return ok(text, body);
+}
 
 function modelToString(model: LiveAdvisorStat["model"]): string | undefined {
 	if (!model) return undefined;
@@ -130,6 +140,7 @@ function modelToString(model: LiveAdvisorStat["model"]): string | undefined {
 }
 
 function buildApplyResult(
+	op: ApplyResult["op"],
 	persisted: boolean,
 	applied: boolean,
 	source: string,
@@ -141,6 +152,7 @@ function buildApplyResult(
 	const enabled = session.isAdvisorEnabled!();
 	const active = session.isAdvisorActive!();
 	return {
+		op,
 		persisted,
 		applied,
 		effectiveAt: "immediate",
@@ -259,40 +271,39 @@ export function registerAdvisorTool(pi: ExtensionAPI, options?: AdvisorToolOptio
 				const nowRunning = s.setAdvisorEnabled!(wantEnabled);
 				const enabled = s.isAdvisorEnabled!();
 				const active = s.isAdvisorActive!();
-				return ok(
-					`Advisor ${wantEnabled ? "enabled" : "disabled"}. ` +
-						`setAdvisorEnabled(${wantEnabled}) returned ${nowRunning}. ` +
-						`enabled=${enabled} active=${active}`,
-				);
+				return okJson({
+					op: p.op,
+					enabled,
+					active,
+					running: nowRunning,
+					discovered: false,
+				});
 			}
 
 			// ---- Status / dump (read-only, no native needed) ----------------
 			if (p.op === "status") {
 				const text = s.formatAdvisorStatus!();
 				const stats = s.getAdvisorStats!();
-				return ok(
-					text +
-						"\n" +
-						JSON.stringify(
-							{
-								enabled: s.isAdvisorEnabled!(),
-								active: s.isAdvisorActive!(),
-								configured: stats.configured,
-								advisors: stats.advisors.map(a => ({
-									name: a.name,
-									status: a.status,
-									model: modelToString(a.model),
-								})),
-							},
-							null,
-							2,
-						),
+				return okJson(
+					{
+						op: "status",
+						enabled: s.isAdvisorEnabled!(),
+						active: s.isAdvisorActive!(),
+						configured: stats.configured,
+						advisors: stats.advisors.map(a => ({
+							name: a.name,
+							status: a.status,
+							model: modelToString(a.model),
+						})),
+					},
+					text,
 				);
 			}
 
 			if (p.op === "dump") {
 				const text = s.formatAdvisorHistoryAsText!({ compact: !p.raw });
-				return ok(text ?? "(no advisor history yet)");
+				const history = text ?? "(no advisor history yet)";
+				return okJson({ op: "dump", raw: !!p.raw, empty: !text }, history);
 			}
 
 			// ---- All remaining ops need native helpers -----------------------
@@ -319,17 +330,17 @@ export function registerAdvisorTool(pi: ExtensionAPI, options?: AdvisorToolOptio
 				const scope: AdvisorScope = p.scope ?? "effective";
 				if (scope === "effective") {
 					const discovered = await native.nativeDiscoverAdvisors(cwd, agentDir);
-					return ok(
-						`scope=effective (${discovered.advisors.length} advisor(s) after merge)\n` +
-							JSON.stringify(discovered, null, 2),
+					return okJson(
+						{ op: "list", scope, ...discovered },
+						`scope=effective (${discovered.advisors.length} advisor(s) after merge)`,
 					);
 				}
 				const dirs = { projectDir, agentDir };
 				const editPath = await native.nativeResolveEditPath(scope, dirs);
 				const doc = await native.nativeLoadConfigFile(editPath);
-				return ok(
-					`scope=${scope} (${doc.advisors.length} advisor(s) in ${editPath})\n` +
-						JSON.stringify(doc, null, 2),
+				return okJson(
+					{ op: "list", scope, source: editPath, ...doc },
+					`scope=${scope} (${doc.advisors.length} advisor(s) in ${editPath})`,
 				);
 			}
 
@@ -356,7 +367,10 @@ export function registerAdvisorTool(pi: ExtensionAPI, options?: AdvisorToolOptio
 					return s === slug || a.name === p.name;
 				});
 				if (!found) return err(`Advisor "${p.name}" not found in ${source}.`);
-				return ok(`scope=${scope} source=${source}\n${JSON.stringify(found, null, 2)}`);
+				return okJson(
+					{ op: "get", scope, source, advisor: found },
+					`scope=${scope} source=${source}`,
+				);
 			}
 
 			// ---- Mutate ops: upsert / remove / set_shared / apply -----------
@@ -486,8 +500,8 @@ export function registerAdvisorTool(pi: ExtensionAPI, options?: AdvisorToolOptio
 					);
 				}
 
-				const result = buildApplyResult(true, true, editPath, activeCount, s, warnings);
-				return ok(JSON.stringify(result, null, 2));
+				const result = buildApplyResult(p.op as ApplyResult["op"], true, true, editPath, activeCount, s, warnings);
+				return okJson(result);
 			}
 
 			// ---- Apply (standalone rediscover + apply) -----------------------
@@ -501,8 +515,8 @@ export function registerAdvisorTool(pi: ExtensionAPI, options?: AdvisorToolOptio
 							`Call advisor enable to start the roster.`,
 					);
 				}
-				const result = buildApplyResult(false, true, `cwd=${cwd}`, activeCount, s, warnings);
-				return ok(JSON.stringify(result, null, 2));
+				const result = buildApplyResult("apply", false, true, `cwd=${cwd}`, activeCount, s, warnings);
+				return okJson(result);
 			}
 
 			return err(`Unknown op: ${String(p.op)}`);

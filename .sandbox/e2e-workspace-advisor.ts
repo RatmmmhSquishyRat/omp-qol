@@ -88,16 +88,16 @@ interface Step {
 }
 
 const steps: Step[] = [
-	{ op: "status", expect: /configured|Advisor is disabled|enabled=/i },
-	{ op: "enable", expect: /Advisor enabled|enabled=true/ },
+	{ op: "status", expect: /"op": "status"/ },
+	{ op: "enable", expect: /"op": "enable"[\s\S]*"enabled": true/ },
 	{
 		op: "upsert",
 		extra: ' name="E2EReviewer" instructions="Watch for regressions in this e2e session."',
-		expect: /E2EReviewer/,
+		expect: /"op": "upsert"[\s\S]*E2EReviewer/,
 	},
-	{ op: "list", extra: ' scope="effective"', expect: /E2EReviewer/ },
-	{ op: "remove", extra: ' name="E2EReviewer"', expect: /"persisted": true|E2EReviewer/ },
-	{ op: "disable", expect: /Advisor disabled|enabled=false/ },
+	{ op: "list", extra: ' scope="effective"', expect: /"op": "list"[\s\S]*E2EReviewer/ },
+	{ op: "remove", extra: ' name="E2EReviewer"', expect: /"op": "remove"[\s\S]*"persisted": true/ },
+	{ op: "disable", expect: /"op": "disable"[\s\S]*"enabled": false/ },
 ];
 
 const proc = Bun.spawn(["omp", "--mode", "rpc"], {

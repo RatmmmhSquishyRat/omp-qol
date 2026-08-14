@@ -88,12 +88,12 @@ This is the path that was missing from the first impl report. It is **not** L1/L
 
 | Step | op | What actually happened |
 |---|---|---|
-| 1 | `status` | Host already had a merged user-scope advisor `default` (`kimi-code/k3`) running. Tool returned `Advisor is enabled … configured: true`. Session flag was already on before we wrote anything. |
-| 2 | `enable` | `setAdvisorEnabled(true) returned true. enabled=true active=true`. No discover (live-only op). |
-| 3 | `upsert` name=`E2EReviewer` | `persisted: true`, `applied: true`, `effectiveAt: immediate`. Source = scratch `WATCHDOG.yml`, not `~/.omp`. |
-| 4 | `list` scope=`effective` | After merge: **1** advisor, `E2EReviewer` with the e2e instructions. Project leaf hid user `default`. |
-| 5 | `remove` name=`E2EReviewer` | `persisted: true`, `applied: true`, same scratch source. Project entry gone. |
-| 6 | `disable` | `setAdvisorEnabled(false) returned false. enabled=false active=false`. |
+| 1 | `status` | Host had merged user-scope advisor `default` (`kimi-code/k3`) running. Tool returned structured `{ "op": "status", "enabled": true, "active": true, "configured": true, "advisors": [{ "name": "default", "status": "running", "model": "kimi-code/k3" }] }`. |
+| 2 | `enable` | Returned structured `{ "op": "enable", "enabled": true, "active": true, "running": true, "discovered": false }`. Obeyed ADR-005 D3 (no discover). |
+| 3 | `upsert` name=`E2EReviewer` | `persisted: true`, `applied: true`, `effectiveAt: immediate`. `op: "upsert"`, `activeCount: 1`, `advisors: [{ name: "E2EReviewer", status: "running" }]`. Source = scratch `WATCHDOG.yml`, not `~/.omp`. |
+| 4 | `list` scope=`effective` | Returned structured `{ "op": "list", "scope": "effective", "advisors": [{ "name": "E2EReviewer", "instructions": "Watch for regressions in this e2e session." }] }`. |
+| 5 | `remove` name=`E2EReviewer` | `persisted: true`, `applied: true`, `op: "remove"`. User `default` advisor resurfaced in active roster (`activeCount: 1`). |
+| 6 | `disable` | Returned structured `{ "op": "disable", "enabled": false, "active": false, "running": false, "discovered": false }`. |
 
 First-attempt gaps (so this is not silently rewritten as “always green”):
 - Cursor `gpt-5.4-nano-high` was a dead model (`not_found`); the turn ended with **zero** `advisor` calls. That is not a use-through.

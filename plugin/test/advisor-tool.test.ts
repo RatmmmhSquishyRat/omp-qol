@@ -341,6 +341,16 @@ describe("A4: enable/disable do not touch native or apply", () => {
 		expect(calls.length).toBe(0); // no native calls
 		expect(sessionCalls.some(c => c.startsWith("applyAdvisorConfigs"))).toBe(false);
 		expect(calls.some(c => c.startsWith("nativeDiscoverAdvisors"))).toBe(false);
+		const parsed = JSON.parse(result.content[0].text!) as {
+			op: string;
+			enabled: boolean;
+			active: boolean;
+			running: boolean;
+			discovered: boolean;
+		};
+		expect(parsed.op).toBe("enable");
+		expect(parsed.enabled).toBe(true);
+		expect(parsed.discovered).toBe(false);
 	});
 
 	test("disable calls setAdvisorEnabled(false) only", async () => {
@@ -358,6 +368,14 @@ describe("A4: enable/disable do not touch native or apply", () => {
 		expect(result.isError).toBeUndefined();
 		expect(sessionCalls).toContain("setAdvisorEnabled:false");
 		expect(calls.length).toBe(0);
+		const parsed = JSON.parse(result.content[0].text!) as {
+			op: string;
+			enabled: boolean;
+			discovered: boolean;
+		};
+		expect(parsed.op).toBe("disable");
+		expect(parsed.enabled).toBe(false);
+		expect(parsed.discovered).toBe(false);
 	});
 });
 
@@ -435,6 +453,7 @@ describe("A6: status and dump", () => {
 		expect(sc).toContain("formatAdvisorStatus");
 		expect(sc).toContain("getAdvisorStats");
 		expect(calls.length).toBe(0); // no native calls
+		expect(result.content[0].text).toContain('"op": "status"');
 	});
 
 	test("dump raw=false → compact=true (default)", async () => {
@@ -630,6 +649,7 @@ describe("A13: ApplyResult shape on successful upsert", () => {
 		const result = await advisorTool().execute("c", { op: "upsert", name: "Alpha" });
 		expect(result.isError).toBeUndefined();
 		const parsed = JSON.parse(result.content[0].text!) as {
+			op: string;
 			persisted: boolean;
 			applied: boolean;
 			effectiveAt: string;
@@ -637,6 +657,7 @@ describe("A13: ApplyResult shape on successful upsert", () => {
 			verification: { enabled: boolean; active: boolean; activeCount: number; advisors: unknown[] };
 			warnings: unknown[];
 		};
+		expect(parsed.op).toBe("upsert");
 		expect(parsed.persisted).toBe(true);
 		expect(parsed.applied).toBe(true);
 		expect(parsed.effectiveAt).toBe("immediate");
