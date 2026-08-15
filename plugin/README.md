@@ -5,22 +5,18 @@ Quality-of-life **plugin** for [omp (Oh My Pi)](https://github.com/can1357/oh-my
 ## Install (users)
 
 ```bash
-omp plugin marketplace add RatmmmhSquishyRat/omp-qol
-omp plugin install omp-qol@omp-qol
+omp plugin install omp-qol-plugin
 ```
 
-Project scope only:
+`omp install omp-qol-plugin` is the same command. Settings, list, and
+uninstall all use the package name `omp-qol-plugin`.
 
-```bash
-omp plugin marketplace add RatmmmhSquishyRat/omp-qol
-omp plugin install --scope project omp-qol@omp-qol
-```
+The first public npm publish has not happened yet. After a human pastes
+`NPM_TOKEN` (or configures npm trusted publisher) and pushes a `v<version>`
+tag, the command above is the official user path.
 
-Marketplace id is `omp-qol@omp-qol`. The npm/runtime package name remains
-`omp-qol-plugin` (used by `omp plugin config` and `node_modules`).
-
-No npm package is published yet. Do not use `omp plugin install omp-qol-plugin`
-until that remaining human step is done.
+`--scope project` is marketplace-only in omp 17.3.4. Passing it with this
+npm spec prints a warning and still writes `~/.omp/plugins`.
 
 ## What it does
 
@@ -122,7 +118,7 @@ bun ../.sandbox/install-plugin.ts          # idempotent; re-run after source cha
 Then launch omp from `../test-workspace` — `omp plugin list` shows
 `omp-qol-plugin@local (0.3.0) (project)`. Mechanism:
 `../docs/researches/omp-project-scoped-plugins.md` §5.4.
-Official packaging research: `../docs/researches/omp-plugin-packaging-and-distribution.md`.
+Official packaging research: `../docs/researches/omp-plugin-packaging-and-distribution-2026-08-15-redo.md`.
 
 ## Plugin settings
 

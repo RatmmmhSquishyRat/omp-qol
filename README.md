@@ -7,39 +7,32 @@ Quality-of-life plugin for [omp (Oh My Pi)](https://github.com/can1357/oh-my-pi)
 Requires a working `omp` (this repo is verified against 17.3.4).
 
 ```bash
-omp plugin marketplace add RatmmmhSquishyRat/omp-qol
-omp plugin install omp-qol@omp-qol
+omp plugin install omp-qol-plugin
 ```
 
-Project-only (does not install into other projects):
+`omp install omp-qol-plugin` is the same command. Restart an already-open session (or `/reload-plugins` for skills; restart for tools/extensions). `omp plugin list` should show `omp-qol-plugin@<version>` under npm plugins.
 
-```bash
-omp plugin marketplace add RatmmmhSquishyRat/omp-qol
-omp plugin install --scope project omp-qol@omp-qol
-```
-
-Then start `omp` and restart the session if it was already open. `/plugins` and `omp plugin list` should show `omp-qol@omp-qol`.
+The first public npm publish has not happened yet. The command above works after a human pastes `NPM_TOKEN` (or configures npm trusted publisher) and pushes a `v<version>` tag. Do not treat a failed install before that tag as a reason to add a git marketplace.
 
 Upgrade:
 
 ```bash
-omp plugin marketplace update omp-qol
-omp plugin upgrade omp-qol@omp-qol
+omp plugin install omp-qol-plugin@<version>
 ```
 
 Uninstall:
 
 ```bash
-omp plugin uninstall omp-qol@omp-qol
+omp plugin uninstall omp-qol-plugin
 ```
 
-Settings use the **package name**, not the marketplace id:
+Settings use the package name:
 
 ```bash
 omp plugin config set omp-qol-plugin greeting "omp-qol ready."
 ```
 
-There is no npm package published yet. `omp plugin install omp-qol-plugin` will fail until a human configures npm publishing. The marketplace commands above are the supported user path.
+`--scope project` is a marketplace-only host flag. `omp plugin install omp-qol-plugin --scope project` prints a warning and still writes the user plugin root (`~/.omp/plugins`). That is host behavior, not a second install channel we maintain.
 
 ## What it does
 
@@ -50,8 +43,7 @@ There is no npm package published yet. `omp plugin install omp-qol-plugin` will 
 ## Layout
 
 ```text
-plugin/          # installable plugin (package name omp-qol-plugin)
-.omp-plugin/     # marketplace catalog the host reads
+plugin/          # npm package omp-qol-plugin
 docs/
 test-workspace/  # in-repo launch folder for developers
 .sandbox/        # dev installers / probes / e2e (not the user install path)
@@ -66,6 +58,8 @@ bun .sandbox/install-plugin.ts
 cd test-workspace
 omp
 ```
+
+From a clone, `omp plugin install ./plugin` (or `omp plugin link ./plugin`) also loads the local tree into the **user** plugin root. That is a host local-link path, not npm, and not project scope.
 
 Do not `git init` `test-workspace` unless the author asks: it has no `.git`, so a project-scope advisor write from inside it resolves to this repo’s production `WATCHDOG.yml`.
 
@@ -86,7 +80,7 @@ L6 real-model e2e stays out of default CI. Full pyramid: `docs/plans/TDDs/qol-de
 
 ## Hard rules
 
-- User install uses the official omp marketplace commands above.
-- In-repo acceptance still must not write the author’s `~/.omp` (use the sandbox installer or an isolated `PI_CONFIG_DIR`).
+- User install is `omp plugin install omp-qol-plugin`.
+- In-repo acceptance still must not write the author’s `~/.omp` (use the sandbox installer or an isolated homedir).
 - The plugin only adds entry points onto host functionality; no emulation (ADR-004 / ADR-005).
 - Research lands in `docs/` before implementation.
