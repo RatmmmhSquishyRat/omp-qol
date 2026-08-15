@@ -1,7 +1,7 @@
 # Session 001: QOL-004 advisor docs
 
 **date**: 2026-08-15
-**commits**: `dda148b`, `475dfbd`, `49ea863`, `078f686`, `643e513`, `336d0ab`, `8feb59a`, `91f670b`, `bb88788`, `2a47408`, `4f688a2`, `49532a7`, `ca4f512`, `c9af694`, `dc23362`, `7e08078`, `3325706`, `3467ccc`（`336d0ab` 起为 Turn 10–11 rework；`4f688a2`/`49532a7` 为 Turn 12 分发；`ca4f512`/`c9af694` 为 Turn 13 分发重做；`dc23362`/`7e08078` 为 Turn 14 默认 npm publish；`3325706`/`3467ccc` 为 Turn 16 测试改走官方安装）
+**commits**: `dda148b`, `475dfbd`, `49ea863`, `078f686`, `643e513`, `336d0ab`, `8feb59a`, `91f670b`, `bb88788`, `2a47408`, `4f688a2`, `49532a7`, `ca4f512`, `c9af694`, `dc23362`, `7e08078`, `3325706`, `3467ccc`, `8e254d6`（`336d0ab` 起为 Turn 10–11 rework；`4f688a2`/`49532a7` 为 Turn 12 分发；`ca4f512`/`c9af694` 为 Turn 13 分发重做；`dc23362`/`7e08078` 为 Turn 14 默认 npm publish；`3325706`/`3467ccc` 为 Turn 16 测试改走官方安装；`8e254d6` 为 Turn 17 发 0.3.2）
 
 ## Turn 1
 
@@ -532,5 +532,18 @@
 - `bun test` 120/120。无隔离的 `install-plugin.ts` 退出 2。隔离 HOME 官方安装写出 `omp-qol-plugin@0.3.1`；L4 verify PASS。作者 `~/.omp/plugins/package.json` 仍不存在；`test-workspace/.omp/plugins` mtime 未变。活 `omp` pid 49744 / 65868 仍在。scratch 已删。未重装 live test-workspace。
 
 **commit**: `3325706`（work：隔离官方安装）、`3467ccc`（docs 映射）
+
+## Turn 17
+
+### User
+
+> state refine做好了, 你看下然后发0.3.2
+
+### Agent Actions
+
+- 审 `c4dee55`：占用表 `mode-exclusivity.ts` 与用户侧暂停互斥对齐；plan 暂停读 `buildSessionContext().mode`；`plan_enter`/`plan_exit` 写同一本 `mode_change`。未改 pillar 原文三行。
+- `bun test` 133/133。升 `plugin/package.json` 与用户向 README 到 `0.3.2`。走 tag `v0.3.2` Release，不复用 `v0.3.1`。
+
+**commit**: `8e254d6`
 
 
