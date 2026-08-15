@@ -1,6 +1,6 @@
 # Phase 002: Implicit "default" advisor — first-class visibility, config, toggle
 
-**commit**: (filled after commit)
+**commit**: `643e513` `feat: manage the host's implicit default advisor through the advisor tool`
 **date**: 2026-08-15
 
 ## Problem / Background

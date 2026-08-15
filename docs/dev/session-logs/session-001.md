@@ -1,7 +1,7 @@
 # Session 001: QOL-004 advisor docs
 
 **date**: 2026-08-15
-**commits**: `dda148b`, `475dfbd`, `49ea863`, `078f686`
+**commits**: `dda148b`, `475dfbd`, `49ea863`, `078f686`, `643e513`
 
 ## Turn 1
 
@@ -176,5 +176,8 @@
 - 修复存量测试隔离缺陷：裸 `bun test` 单进程从未真正绿过（pi-utils DirResolver 在首次模块加载冻结 PI_CONFIG_DIR，kill-switch 测试 beforeAll 改 env 已迟）；新增 bun preload `test/setup.ts` + `bunfig.toml` 统一冻结隔离根，kill-switch 测试硬编码同根，`package.json` test 脚本简化为裸 `bun test`。全量 95/95 绿（单进程与分文件均验证）。
 - e2e 扩至 9 步（status 见隐式 default → upsert default enabled=false 暂停 → remove 恢复），首跑 8/9 后卡在模型复述 JSON 的回话轮，harness 改回复 DONE + 超时 720s，重跑 9/9 PASS（zai/glm-4.5-flash，未截断证据落盘）。
 - 重装 test-workspace 插件并 L4 验证通过。
+- 发现仓库根有用户自建的 `WATCHDOG.yml`（6 个监察 advisor），非本 agent 产物，未纳入提交。
+
+**commit**: `643e513`
 
 
