@@ -1,284 +1,295 @@
-# Implementation Guide: 仓内 marketplace 分发（Route B）
+# Implementation Guide: omp-qol npm 默认分发
 
 **date**: 2026-08-15
 **clarification report**: `docs/plans/routes/plugin-distribution-clarification-report.md`
 
 ## 1. Route Lock Summary
 
-- Clarification report reference: `docs/plans/routes/plugin-distribution-clarification-report.md`
-- Selected route: B — 仓库根 `.omp-plugin/marketplace.json`，插件 `source: "./plugin"`
-- Locked stack and versions:
-  - 宿主行为按 omp 17.3.4
-  - 市场名 `omp-qol`，目录插件名 `omp-qol`，包名 `omp-qol-plugin`
-  - 当前版本 `0.3.0`（与现有 package.json 对齐，本轮不无故 bump）
-  - GitHub：`RatmmmhSquishyRat/omp-qol`（public）
-- Accepted tradeoffs: 用户两条命令（add + install）；catalog version 双写；npm 不作为已发布通道
-- Deferred risks: GitHub Actions 首次跑宿主源码链接；隔离根下的官方 install 验证
+- Clarification report reference: 上记重做报告
+- Selected route: A — 用户头条 `omp plugin install omp-qol-plugin`；`plugin/` 发到 npm
+- Locked stack and versions: omp 17.3.4 安装行为；Bun 加载 `./src/main.ts`；GitHub Actions bun 1.3；`npm publish` 在 `v*` tag
+- Accepted tradeoffs: `--scope project` 对 npm 无效；本轮不真实 publish；删除 `.omp-plugin/marketplace.json`
+- Deferred risks: packed tarball 的扩展校验须实测；trusted publisher 与 `NPM_TOKEN` 由作者配置
 
 ## 2. Project Constraints Snapshot
 
-- Repository shape: 单 git 根；插件在 `plugin/`；验收在 `test-workspace/`；研究/支柱在 `docs/`
-- Runtime and deployment constraints: 扩展入口保持 TS；密封二进制用 Bun 加载缓存副本。不要把根变成插件包。
-- Compliance and security constraints: 不提交 token；不改根 `WATCHDOG.yml`；不杀外来 omp；不 `git init` test-workspace
-- Performance and reliability constraints: 默认 CI 必须便宜、无模型密钥
-- Team constraints: Windows 开发机；CI 用 ubuntu-latest + Bun 1.3
+- Repository shape: monorepo。可发布单元是 `plugin/`。根上没有 package.json。
+- Runtime and deployment constraints: 密封 omp 二进制用 Bun import 缓存里的 TS。不要自建编译步。
+- Compliance and security constraints: 不提交 token；不改根 `WATCHDOG.yml`；不 `git init` test-workspace；不杀非本进程 omp。
+- Performance and reliability constraints: 默认 CI 只跑插件测试与插件-only tsc。L6 真模型 e2e 不进默认 CI。
+- Team constraints: Windows PowerShell。多行 commit 用临时文件 + `git commit -F`。
 
 ## 3. Technology Instruction Cards
 
-### Marketplace catalog（`.omp-plugin/marketplace.json`）
+### npm 包（`plugin/package.json`）
 
-- Intro: 宿主发现第三方插件的目录文件。用户 `marketplace add` 之后，`install name@marketplace` 才成立。
+- Intro: 这是宿主 `PluginManager.install` 认的身份。`omp plugin list` / `config` / `uninstall` 都用 `name`。
 - Implementation instruction:
-  - Setup sequence: 在仓库根建 `.omp-plugin/marketplace.json`（优先于 `.claude-plugin/`）
-  - Required patterns: `name`、`owner.name`、`plugins[]` 含 `name` + `source` + `version`
-  - Forbidden patterns: 市场 npm source；相对路径不带 `./`；把 source 指到仓库根
+  - Setup sequence: 保持 `name: omp-qol-plugin`；补 `publishConfig`；`files` 含 `src`、`README.md`、`LICENSE`
+  - Required patterns: `omp.extensions: ["./src/main.ts"]`；`omp.settings` 与现网一致
+  - Forbidden patterns: 不要改成 scoped 名，除非 `omp-qol-plugin` 被抢且有证据；不要把 `private: true` 写进将发布的包
 - Key configurations:
-  - Mandatory: `"source": "./plugin"`；`version` 与 `plugin/package.json` 相同
-  - Recommended: `homepage` / `repository` / `license` / `category`
+  - Mandatory settings: `name`、`version`、`license`、`repository.directory: plugin`、`omp.extensions`
+  - Recommended defaults: `publishConfig.access: public`；`publishConfig.registry: https://registry.npmjs.org/`
 - Project-specific non-trivial example:
-
 ```json
 {
-  "name": "omp-qol",
-  "owner": { "name": "RatmmmhSquishyRat" },
-  "metadata": {
-    "description": "Quality-of-life plugins for omp",
-    "version": "1"
+  "name": "omp-qol-plugin",
+  "version": "0.3.0",
+  "files": ["src", "README.md", "LICENSE"],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
-  "plugins": [
-    {
-      "name": "omp-qol",
-      "description": "Agent goal, plan/vibe mode, and advisor tools",
-      "version": "0.3.0",
-      "source": "./plugin",
-      "homepage": "https://github.com/RatmmmhSquishyRat/omp-qol",
-      "repository": "https://github.com/RatmmmhSquishyRat/omp-qol",
-      "license": "MIT",
-      "category": "productivity"
-    }
-  ]
+  "omp": {
+    "extensions": ["./src/main.ts"]
+  }
 }
 ```
-
 - Pitfalls and diagnostics:
-  - Symptom: `Relative plugin source paths must start with "./"`
-  - Root cause: source 写成 `plugin` 或 `/plugin`
-  - Fix: 用 `./plugin`
+  - Symptom: `omp plugin config` 报 Plugin not found
+  - Root cause: 用户装的是旧市场 ID，`PluginManager.list` 跳过市场 symlink
+  - Fix: 改用 `omp plugin install omp-qol-plugin`，或卸载 `omp-qol@omp-qol`
 - Verification:
-  - Command: 隔离 `PI_CONFIG_DIR` 下 `omp plugin marketplace add <repo>` 然后 `omp plugin install omp-qol@omp-qol`
-  - Expected: list 出现 `omp-qol@omp-qol`，缓存目录是 `plugin/` 的拷贝（有 `src/main.ts`）
-- Escalation triggers: catalog 被拒、相对路径在 URL 市场里失败
-- Official verification links:
-  - https://github.com/can1357/oh-my-pi/blob/main/docs/marketplace.md （2026-08-15）
-  - https://github.com/can1357/oh-my-pi/blob/main/docs/skills/authoring-marketplaces.md （2026-08-15）
-- Query methods:
-  - `oh-my-pi marketplace.json .omp-plugin authoring`
-  - `site:github.com/can1357/oh-my-pi npm plugin sources are not yet supported`
-- Sources: 同上 + `source-resolver.ts`
+  - Command or test: `npm pack` 在 `plugin/`；tarball 内含 `src/main.ts`，不含 `test/`
+  - Expected result: pack 成功；`npm view omp-qol-plugin` 在 publish 前仍 404
+- Escalation triggers:
+  - `npm publish` 报 403 / 409
+  - 宿主不再用 `bun install` 装 npm 插件
+- Official verification links (when escalated):
+  - https://docs.npmjs.com/cli/v11/commands/npm-publish （查 publishConfig / trusted publisher）
+  - https://github.com/can1357/oh-my-pi/blob/main/docs/plugin-manager-installer-plumbing.md
+- Query methods (when escalated):
+  - `npm publish trusted publisher GitHub Actions`
+  - `oh-my-pi PluginManager.install bun install`
+- Sources:
+  - `ref_repos/oh-my-pi/packages/coding-agent/src/extensibility/plugins/manager.ts` 2026-08-15
+  - `npm view omp-qol-plugin` 404 2026-08-15
 
-### `plugin/package.json` 元数据
+### omp PluginManager / CLI
 
-- Intro: 运行时包名、版本、扩展入口、设置 schema。市场 ID 不替代这些字段。
+- Intro: 用户命令的运行时。分类器决定 npm vs 市场 vs 本地。
 - Implementation instruction:
-  - Setup sequence: 补 `repository`、`homepage`、`bugs`、`files`、`peerDependencies`
-  - Required patterns: `omp.extensions: ["./src/main.ts"]`；`license: MIT` 且仓库有 LICENSE
-  - Forbidden patterns: 把 `name` 改成与市场 ID 强行同一而打断已装的 `omp-qol-plugin` lockfile
+  - Setup sequence: README 只写 npm 头条；可选写 `omp install omp-qol-plugin`
+  - Required patterns: 升级写成 `omp plugin install omp-qol-plugin@<version>`
+  - Forbidden patterns: 不要把 `marketplace add` 写成默认；不要宣称 `omp plugin install <npm> --scope project` 会写项目目录
 - Key configurations:
-  - Mandatory: `name=omp-qol-plugin`，`version` 与 catalog 对账
-  - Recommended: `files: ["src", "README.md", "LICENSE"]`（给未来 npm pack；市场拷贝不读这个字段）
-- Project-specific non-trivial example: 见实现后的 `plugin/package.json`
-- Pitfalls and diagnostics:
-  - Symptom: `omp plugin config set omp-qol ...` 找不到包
-  - Root cause: config 用的是 package name，不是 `omp-qol@omp-qol`
-  - Fix: `omp plugin config set omp-qol-plugin <key> <value>`
-- Verification: `node`/`bun` 读 JSON，断言字段存在；CI 对账脚本
-- Escalation triggers: 宿主开始强制新必填字段
-- Official verification links: `docs/skills/authoring-extensions.md` package.json 段（2026-08-15）
-- Query methods: `oh-my-pi package.json omp.extensions`
-- Sources: `types.ts` PluginManifest
-
-### GitHub Actions
-
-- Intro: push/PR 验证；tag 只做 Release 说明，不自动 npm publish
-- Implementation instruction:
-  - Setup sequence: `.github/workflows/ci.yml` + `release.yml`
-  - Required patterns: `plugin/` 下 `bun test`；`tsc -p tsconfig.plugin.json`；lockfile 钉住 `@oh-my-pi/pi-coding-agent@17.3.4` 供集成测试
-  - Forbidden patterns: 默认工作流跑 L6；push 自动 `npm publish`；把 `NPM_TOKEN` 写进仓库
-- Key configurations:
-  - Mandatory: `permissions.contents: read`（CI）；Release 工作流才 `contents: write`
-  - Recommended: bun 1.3；frozen lockfile
-- Project-specific non-trivial example: 见 `.github/workflows/ci.yml`
-- Pitfalls and diagnostics:
-  - Symptom: typecheck 报一堆 `.md` 模块
-  - Root cause: tsc 顺着 ref_repos / 宿主源码 import
-  - Fix: `tsconfig.plugin.json` 用本地 host stub，只 include `src`
-- Verification: 本地复现 CI 脚本；若有 `actionlint` 则跑它
-- Escalation triggers: bun 版本或宿主 tag 不存在
-- Official verification links: 宿主 `ci.yml`（对照「测试与发布分开」）；omp-headroom ci.yml（2026-08-15）
-- Query methods: `oh-my-pi github actions skip_npm`；`omp-headroom ci.yml bun test`
-- Sources: github-master skill（验证门与依赖刷新）
-
-### 隔离 `PI_CONFIG_DIR` 验证
-
-- Intro: `PI_CONFIG_DIR` 是相对 home 的配置根名字，默认 `.omp`。改成 `.omp-qol-dist-verify-*` 就不会写作者 `~/.omp`。
-- Implementation instruction:
-  - Setup sequence: 设环境变量 → marketplace add 本仓路径或 GitHub shorthand → install → list → 删隔离根
-  - Required patterns: 验证目录用 scratch；不要用 test-workspace 做 project-scope 写入
-  - Forbidden patterns: 验证时 `git init` test-workspace；验证后留下隔离根不管
-- Key configurations:
-  - Mandatory: `PI_CONFIG_DIR=.omp-qol-dist-verify-<ts>`
-  - Recommended: project-scope 验证另开带 `.git` 的 scratch 目录
+  - Mandatory settings: 无仓库内配置。隔离验证须改 `USERPROFILE`/`HOME`，不要只改 `PI_CONFIG_DIR`（那是目录名，默认 `.omp`）
+  - Recommended defaults: 验证用 scratch HOME
 - Project-specific non-trivial example:
-
 ```powershell
-$env:PI_CONFIG_DIR = ".omp-qol-dist-verify"
-omp plugin marketplace add C:\Users\15480\Desktop\AIWorkshop\repos\omp-qol
-omp plugin install omp-qol@omp-qol
-omp plugin list
+$scratch = Join-Path $env:TEMP "omp-qol-install-scratch"
+New-Item -ItemType Directory -Force -Path $scratch | Out-Null
+$env:USERPROFILE = $scratch
+$env:HOME = $scratch
+omp plugin install omp-qol-plugin --scope project --dry-run
 ```
-
 - Pitfalls and diagnostics:
-  - Symptom: 装进了 `~/.omp`
-  - Root cause: 忘记设 `PI_CONFIG_DIR`，或 DirResolver 已在进程里冻过
-  - Fix: 新开进程；先设环境变量
-- Verification: 隔离根下出现 `plugins/installed_plugins.json`；`~/.omp/marketplaces.json` 无本市场新条目
-- Escalation triggers: XDG 变量把路径拐走（本机 Windows 默认不走 XDG）
-- Official verification links: `packages/utils/src/dirs.ts` `getConfigDirName` / `getPluginsDir`（2026-08-15）
-- Query methods: `PI_CONFIG_DIR getPluginsDir oh-my-pi`
-- Sources: `dirs.ts:205-207`、`531-536`
+  - Symptom: dry-run 之后作者 `~/.omp/plugins/package.json` 多了骨架
+  - Root cause: `install` 在 dry-run 前仍调用 `#ensurePackageJson()`（`manager.ts:425-436`）
+  - Fix: 验证必须隔离 homedir
+- Verification:
+  - Command or test: 上记 dry-run
+  - Expected result: stderr 有 `Warning: --scope is only supported for marketplace installs`；stdout 有 Would install / Installed
+- Escalation triggers:
+  - 警告文案消失或 `--scope` 开始写入项目根
+- Official verification links (when escalated):
+  - `docs/plugin-manager-installer-plumbing.md`
+  - `docs/marketplace.md`
+- Query methods (when escalated):
+  - `oh-my-pi --scope only supported for marketplace installs`
+- Sources:
+  - `plugin-cli.ts:429-440` 2026-08-15
+  - 本机 `omp/17.3.4` `omp plugin --help`
+
+### GitHub Actions（CI + Release）
+
+- Intro: push/PR 验证插件；tag 发布 npm 并切 GitHub Release。
+- Implementation instruction:
+  - Setup sequence: 保留 `ci.yml` 的 plugin job；`release.yml` 增加 `npm-publish` job
+  - Required patterns: working-directory `plugin`；`bun run typecheck` 用 `tsconfig.plugin.json`；publish 用 `setup-node` 的 `registry-url` + `NODE_AUTH_TOKEN`
+  - Forbidden patterns: 不要在 push 上 publish；不要把 L6 / 真模型测试放进默认 CI；不要为了绿而跳过 `bun test`
+- Key configurations:
+  - Mandatory settings: `secrets.NPM_TOKEN`（作者稍后粘贴）或 npm trusted publisher；`permissions.id-token: write`
+  - Recommended defaults: bun-version `1.3`，与现网 CI 一致
+- Project-specific non-trivial example: 见 §7 Recipe 2
+- Pitfalls and diagnostics:
+  - Symptom: tag 推上去之后 publish job 红
+  - Root cause: 还没有 `NPM_TOKEN`，也还没配 trusted publisher
+  - Fix: 这是预期的剩余人工步骤，不是选路失败
+- Verification:
+  - Command or test: 用 GitHub 的 workflow 语法检查，或至少 YAML 可解析 + 本地复现 `bun test` / `typecheck`
+  - Expected result: CI job 与本地同构命令绿
+- Escalation triggers:
+  - npm 报 OIDC 与 token 都不被接受
+- Official verification links (when escalated):
+  - https://docs.npmjs.com/trusted-publishers
+  - 宿主 `.github/workflows/ci.yml` `release_native_leaves`（OIDC + `NODE_AUTH_TOKEN` 回退）
+- Query methods (when escalated):
+  - `npm trusted publishers GitHub Actions id-token`
+- Sources:
+  - 宿主 `ci.yml` 约 670–713 行 2026-08-15
+
+### 仓内 marketplace catalog（删除）
+
+- Intro: 上一轮主通道。本路线不维护。
+- Implementation instruction:
+  - Setup sequence: 删除 `.omp-plugin/marketplace.json`；元数据检查不再读它
+  - Required patterns: 研究文保留「市场是 catalog 作者用的」说明
+  - Forbidden patterns: 不要再把 `marketplace add RatmmmhSquishyRat/omp-qol` 写进 README 头条；不要投稿社区市场
+- Key configurations: 无
+- Project-specific non-trivial example: 无（删除）
+- Pitfalls and diagnostics:
+  - Symptom: 旧用户仍执行上一轮 README
+  - Root cause: origin 上还曾推过 catalog
+  - Fix: 新 README 覆盖；需要时卸载 `omp-qol@omp-qol`
+- Verification:
+  - Command or test: 仓库根不再有 `.omp-plugin/marketplace.json`
+  - Expected result: git 不再跟踪该文件
+- Escalation triggers: 宿主把 npm 从 `omp plugin install` 里拿掉（当前没有这种信号）
+- Official verification links (when escalated): `docs/skills/authoring-marketplaces.md`
+- Query methods (when escalated): `oh-my-pi authoring marketplaces vs authoring extensions`
+- Sources: 作者第二条澄清 2026-08-15；重做调研 §D
 
 ## 4. Module Blueprint
 
-### Catalog
+### plugin 包
 
-- Responsibility: 声明市场名与插件源
-- Owner: 分发面
-- Location: `.omp-plugin/marketplace.json`
-- Public interfaces: 宿主 catalog schema
-- Schema ownership: 宿主 MarketplaceCatalog
-- In scope: 一条插件、相对 source、semver
-- Out of scope: 多插件生态、Claude 双目录（非必须）
-- Allowed dependencies: 无代码依赖
-- Forbidden dependencies: 指向仓库根或 `test-workspace`
+- Responsibility: 可发布的 omp 插件
+- Owner: 本仓
+- Location: `plugin/`
+- Public interfaces: `package.json#name`、`omp.extensions`、`omp.settings`
+- Schema ownership: settings schema 在 `package.json`
+- In scope: 源码、测试、LICENSE、README 安装段
+- Out of scope: 仓内 sandbox 安装器逻辑（开发专用）
+- Allowed dependencies: peer `@oh-my-pi/pi-coding-agent`；dev bun/typescript/zod
+- Forbidden dependencies: 不要把宿主 `ref_repos` 写进 published `dependencies`
 
-### Plugin package
+### CI / Release
 
-- Responsibility: 运行时清单与入口
-- Owner: `plugin/`
-- Location: `plugin/package.json`、`plugin/src/`
-- Public interfaces: `omp.extensions`、`omp.settings`、包名
-- Schema ownership: 本插件 settings
-- In scope: 元数据补全、LICENSE
-- Out of scope: 改工具行为
-- Allowed dependencies: 现有 zod devDep；peer `@oh-my-pi/pi-coding-agent`
-- Forbidden dependencies: 把宿主 monorepo 写进 runtime dependencies
-
-### Dev installer
-
-- Responsibility: 本仓 test-workspace 验收
-- Owner: `.sandbox/install-plugin.ts`
-- Location: 不变
-- Public interfaces: 开发者脚本
-- In scope: 保持幂等拷贝
-- Out of scope: 当作用户安装
-- Allowed dependencies: 无
-- Forbidden dependencies: 被 README 第一段引用为官方安装
-
-### CI
-
-- Responsibility: push/PR 门禁；tag Release
-- Owner: `.github/workflows/`
+- Responsibility: 验证与发布
+- Owner: 本仓 `.github/workflows/`
 - Location: `ci.yml`、`release.yml`
-- Public interfaces: GitHub Checks
-- In scope: bun test、插件 typecheck、version 对账
-- Out of scope: L6、自动 npm
-- Allowed dependencies: checkout oh-my-pi@v17.3.4
-- Forbidden dependencies: 仓库密钥
+- Public interfaces: GitHub Actions 作业名；npm 包
+- Schema ownership: tag `v<plugin.version>`
+- In scope: bun test、plugin tsc、npm publish、GitHub Release
+- Out of scope: L6、对 `ref_repos` 的 tsc
+- Allowed dependencies: checkout / setup-bun / setup-node
+- Forbidden dependencies: 向默认 CI 注入需要付费模型密钥的步骤
+
+### 用户文档
+
+- Responsibility: 陌生人能复制的命令
+- Owner: 根 `README.md`、`plugin/README.md`
+- Location: 仓库根与 `plugin/`
+- Public interfaces: 安装 / 升级 / 卸载 / config
+- Schema ownership: 命令字符串必须与宿主 17.3.4 一致
+- In scope: npm 头条；sandbox 标明 in-repo
+- Out of scope: 社区市场投稿说明
+- Allowed dependencies: 指向重做调研
+- Forbidden dependencies: 把 sandbox 写成用户安装
+
+### 元数据检查脚本
+
+- Responsibility: 包字段与 tag 对齐
+- Owner: `.sandbox/check-distribution-metadata.ts`
+- Location: `.sandbox/`
+- Public interfaces: 无参检查；`--tag vX.Y.Z`
+- Schema ownership: 包名、license、repository、extensions、files、publishConfig
+- In scope: `plugin/package.json`
+- Out of scope: marketplace catalog
+- Allowed dependencies: 只读 JSON
+- Forbidden dependencies: 网络 publish
 
 ## 5. Coupling Contract Matrix
 
 | Source -> Target | Coupling type | Allowed path | Forbidden path | Failure behavior | Versioning policy |
 | --- | --- | --- | --- | --- | --- |
-| catalog -> plugin/ | schema | `source: "./plugin"` | 指到仓根 / docs | install 找不到目录 | catalog.version === package.version |
-| README -> 宿主 CLI | API | marketplace add/install | 教用户跑 sandbox | 命令失败即文档错 | 随 17.3.4 行为 |
-| CI -> plugin tests | API | `bun test` in plugin/ | 改断言迁就 CI | CI 红则修测试环境 | 不降断言 |
-| sandbox installer -> test-workspace | filesystem | 项目侧四件套 | 写 ~/.omp | 开发者重跑脚本 | 与 package.version 同步 |
-| 用户安装 -> ~/.omp 或项目 .omp | filesystem | 宿主官方 scope | 本仓生产 WATCHDOG.yml | 宿主报错 | 宿主 lockfile |
+| README -> 宿主 CLI | API | `omp plugin install omp-qol-plugin` | `marketplace add` 当头条 | 命令失败即文档错 | 随 17.3.4 行为，宿主改分类器再改文档 |
+| plugin/package.json -> PluginManager | schema | `name` + `omp.extensions` | 根 package.json 冒充插件 | 装得上但加载跳过，或校验失败回滚 | semver；tag `v` + version |
+| release.yml -> npm | API | tag job + `NPM_TOKEN` / OIDC | push 自动 publish | job 红；GitHub Release 仍可独立成功 | 同一 version 不可重复 publish |
+| sandbox installer -> 用户 README | none | 标成 in-repo | 写成官方安装 | 验收污染作者 `~/.omp` | 不随 npm version 改机制 |
+| 已删除 catalog -> 宿主 MarketplaceManager | none | 不提交 | 再加回当默认通道 | 无 | n/a |
 
 ## 6. Key Config Atlas
 
 | Area | File path | Key | Required value/pattern | Rationale | Risk if wrong |
 | --- | --- | --- | --- | --- | --- |
-| 市场名 | `.omp-plugin/marketplace.json` | `name` | `omp-qol` | 合法 name segment | add 后 ID 对不上 README |
-| 插件目录名 | 同上 | `plugins[0].name` | `omp-qol` | 组成 `omp-qol@omp-qol` | install 找不到条目 |
-| 源 | 同上 | `plugins[0].source` | `./plugin` | 只发布插件树 | 整仓或空目录 |
-| 版本 | 同上 + `plugin/package.json` | `version` | 相同 semver | upgrade 比较 | 升级静默跳过 |
-| 包名 | `plugin/package.json` | `name` | `omp-qol-plugin` | node_modules / config | 已有 lockfile 断裂 |
-| 入口 | `plugin/package.json` | `omp.extensions` | `["./src/main.ts"]` | 宿主加载 | 装上但不注册工具 |
-| CI typecheck | `plugin/tsconfig.plugin.json` | `include` | `["src"]` | 避开宿主 .md | CI 被 ref_repos 噪声打死 |
-| 宿主 pin | `plugin/bun.lock` | `@oh-my-pi/pi-coding-agent` | `17.3.4` | 与本机 omp 对齐 | 测试 API 漂移 |
+| 包名 | `plugin/package.json` | `name` | `omp-qol-plugin` | list/config/uninstall | 用户命令对不上 |
+| 入口 | 同上 | `omp.extensions` | `["./src/main.ts"]` | 密封二进制 Bun import | 安装校验失败 |
+| 发布文件 | 同上 | `files` | 含 `src` | 用户拿到源码入口 | pack 后缺入口 |
+| 注册表 | 同上 | `publishConfig.registry` | `https://registry.npmjs.org/` | 避免发到错误 registry | publish 发错地方 |
+| 仓库指针 | 同上 | `repository.directory` | `plugin` | npm 页链到子目录 | 源码链接进根 |
+| CI typecheck | `plugin/package.json` scripts | `typecheck` | `tsc --noEmit -p tsconfig.plugin.json` | 避开宿主 `.md` import | CI 被 ref_repos 噪声打死 |
+| Release tag | `.github/workflows/release.yml` | `on.push.tags` | `v*` | 与 version 对账 | 错 tag 发错版本 |
+| 元数据 | `.sandbox/check-distribution-metadata.ts` | `--tag` | `v${version}` | 防止 tag 与包不一致 | 发错版本 |
 
 ## 7. Implementation Recipes
 
-### Recipe 1: 让陌生人能 marketplace install
+### Recipe 1: 把 package.json 收成可 publish
 
-- Preconditions: 仓 public；`plugin/package.json` 已有 `omp.extensions`
+- Preconditions: 现有 `plugin/package.json` 已有 name/version/omp
 - Steps:
-  1. 写 `.omp-plugin/marketplace.json`
-  2. 补 LICENSE 与 package 元数据
-  3. README 第一段改成 add + install
-  4. sandbox 段改标 Dev / in-repo
-- Key code snippet: 见 §3 catalog 例子
-- Validation checks: 隔离根 install；`omp plugin list` 见 `omp-qol@omp-qol`
-- Common failure and fix: add 本地路径时把 `plugin/node_modules` 拷进缓存 — git 安装无此问题；本地验证后删隔离根
+  1. 加入 `publishConfig`
+  2. 确认 `files` 含 `src`、`README.md`、`LICENSE`
+  3. 不要改 `omp.extensions`
+- Key code snippet: 见 §3 npm 卡
+- Validation checks: `bun .sandbox/check-distribution-metadata.ts`；`cd plugin && npm pack --dry-run`
+- Common failure and fix: 漏 LICENSE → pack 警告；把 `plugin/LICENSE` 留在 files 里
 
-### Recipe 2: 插件-only typecheck
+### Recipe 2: tag 上的 npm publish 作业
 
-- Preconditions: 现有 `tsconfig.json` 的 paths 指向仓外 `ref_repos`
+- Preconditions: `ci.yml` 已能跑 plugin 测试
 - Steps:
-  1. 新增 `plugin/types/host-ambient.d.ts` 声明本插件 src 用到的宿主模块
-  2. 新增 `tsconfig.plugin.json`：include 仅 `src`，paths 指向 stub
-  3. `package.json` 的 `typecheck` 改跑这份 config
+  1. `release.yml` 拆 verify / npm-publish / github-release
+  2. npm-publish：`id-token: write` + `NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}`
+  3. github-release 只依赖 verify，不依赖 publish（密钥未到时仍能切 Release）
 - Key code snippet:
-
-```json
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "paths": {
-      "@oh-my-pi/pi-coding-agent": ["./types/host-ambient.d.ts"],
-      "@oh-my-pi/pi-coding-agent/*": ["./types/host-ambient.d.ts"]
-    }
-  },
-  "include": ["src"]
-}
+```yaml
+npm-publish:
+  needs: verify
+  permissions:
+    id-token: write
+    contents: read
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: "24"
+        registry-url: https://registry.npmjs.org
+    - working-directory: plugin
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      run: npm publish --access public
 ```
+- Validation checks: YAML 可解析；作业存在于 tag 工作流
+- Common failure and fix: 无 token 时 publish 红。这是剩余人工步骤，不要改回市场通道
 
-- Validation checks: `bun run typecheck` 退出 0；输出不含 `.md`
-- Common failure and fix: stub 漏了 `getAgentDir` / `repo` — 按 `advisor-native.ts` 补
+### Recipe 3: 隔离根证明 `--scope` 对 npm 的真实行为
 
-### Recipe 3: CI 跑 118 测试
-
-- Preconditions: `plugin/package.json` 把 `@oh-my-pi/pi-coding-agent` 标成 peer；lockfile 已生成
+- Preconditions: 本机 `omp` 17.3.4；不要动作者 `~/.omp`
 - Steps:
-  1. `cd plugin && bun install --frozen-lockfile`
-  2. `bun run typecheck`
-  3. `bun test`
-  4. 仓库根 `bun .sandbox/check-distribution-metadata.ts`
-- Key code snippet: CI 工作目录设为 `plugin`，不要在默认 job 里跑 L6
-- Validation checks: 118 pass；typecheck 0；对账 PASS
-- Common failure and fix: lockfile 未提交导致 frozen-lockfile 失败 — 提交 `plugin/bun.lock`
+  1. 新建 scratch 目录，设置 `USERPROFILE` 与 `HOME`
+  2. `omp plugin install omp-qol-plugin --scope project --dry-run`
+  3. 记录警告
+  4. 若要装本包：`npm pack` 后用官方 npm spec 安装（见验证节），再 `omp plugin list`
+  5. 确认 scratch 外的 `~/.omp` 没有新文件
+- Key code snippet:
+```powershell
+omp plugin install omp-qol-plugin --scope project --dry-run
+```
+- Validation checks: 警告文本含 `Ignoring`；list 若真装则出现 `omp-qol-plugin@` 且无 `(project)`
+- Common failure and fix: 只设 `PI_CONFIG_DIR` 仍会写到 `%USERPROFILE%\<name>\plugins`
 
 ## 8. Pitfall Catalog
 
 | Pitfall | Trigger | Symptom | Root cause | Fix | Prevention |
 | --- | --- | --- | --- | --- | --- |
-| 把 sandbox 当官方安装 | 沿用旧 README | 陌生人没有脚本 | 验收夹具被写成产品入口 | README 分段 | 指南 §4 禁止 |
-| git URL 装整仓 | 想少一条命令 | bun 找不到根清单或装错树 | 根上无插件 package.json | 不要宣传 git URL | 路线报告已否决 C |
-| --scope 以为对 link 有效 | 抄 CLI flag 文案 | 警告后仍进 ~/.omp | 代码忽略 scope | 只在市场 install 写 --scope | 调研 §9 |
-| catalog 漏 version | 只改 package.json | upgrade 不更新 | 全量 upgrade 只看 catalog version | CI 对账 | check-distribution-metadata |
-| test-workspace project install | 图省事 | 写到生产 WATCHDOG.yml | 无 .git，repo.root 上溯仓根 | 官方路径验证用 scratch git | 支柱安全约束 |
-| typecheck 进宿主 .md | 用旧 tsconfig paths | 267+ 错 | Bun 专属 md import | tsconfig.plugin.json | CI 只跑 plugin config |
+| 用 token 缺失否决 npm | 选路 | 又回到 marketplace | 把密钥当成通道条件 | 作业留下，等作者粘贴 | 支柱第二条 |
+| 把 `--scope` 写成 npm 能力 | README | 用户以为项目目录会有插件 | oclif 帮助没写「仅市场」 | 以 `plugin-cli.ts:429-436` 为准 | 头条不写 `--scope` |
+| 验证污染 `~/.omp` | dry-run / install | 作者用户根多出 package.json | dry-run 仍 `#ensurePackageJson` | 隔离 HOME | 验证清单写明 |
+| 市场安装后 config 失败 | 旧用户 | Plugin not found | `list()` 跳过市场 symlink | 改走 npm 安装 | 删除 catalog |
+| CI 跑宿主 tsc | 改 typecheck 脚本 | 大量 `.md` import 错 | `tsconfig` 含 ref_repos | 只用 `tsconfig.plugin.json` | ci.yml 跑 `bun run typecheck` |
+| git URL 当头条 | 想绕过 npm | `Invalid package name` 或装整仓 | 根上无 package.json | 不走 C | 布局保持 `plugin/` |
 
 ## 9. Implementor Cheat Sheets
 
@@ -286,44 +297,47 @@ omp plugin list
 
 | Task | Command | Expected signal |
 | --- | --- | --- |
-| 用户安装（user） | `omp plugin marketplace add RatmmmhSquishyRat/omp-qol` 然后 `omp plugin install omp-qol@omp-qol` | list 见 `omp-qol@omp-qol` |
-| 用户安装（project） | 同上 install 加 `--scope project` | list 带 `(project)` |
-| 升级 | `omp plugin marketplace update omp-qol` 然后 `omp plugin upgrade omp-qol@omp-qol` | 新 version |
-| 卸载 | `omp plugin uninstall omp-qol@omp-qol` | 列表消失 |
-| 设置 | `omp plugin config set omp-qol-plugin greeting hi` | config get 回显 |
-| 开发重装 test-workspace | `bun .sandbox/install-plugin.ts` | `VERDICT: PASS` |
+| 用户安装 | `omp plugin install omp-qol-plugin` | `Installed omp-qol-plugin@<ver>` |
+| 顶层别名 | `omp install omp-qol-plugin` | 同上 |
+| 升级 | `omp plugin install omp-qol-plugin@<ver>` | 新 version |
+| 卸载 | `omp plugin uninstall omp-qol-plugin` | Uninstalled |
+| 设置 | `omp plugin config set omp-qol-plugin greeting "..."` | Set greeting |
+| 列表 | `omp plugin list` | `omp-qol-plugin@<ver>` 在 npm Plugins 段 |
 | 插件测试 | `cd plugin && bun test` | 118+ pass |
-| 插件 typecheck | `cd plugin && bun run typecheck` | 0 errors |
-| 元数据对账 | `bun .sandbox/check-distribution-metadata.ts` | PASS |
+| 插件 tsc | `cd plugin && bun run typecheck` | exit 0 |
+| 元数据 | `bun .sandbox/check-distribution-metadata.ts` | PASS |
+| 开发安装 | `bun .sandbox/install-plugin.ts` | test-workspace 项目侧产物 |
 
 ### File Placement Cheat Sheet
 
 | Artifact type | Allowed location | Forbidden location |
 | --- | --- | --- |
-| marketplace catalog | `.omp-plugin/marketplace.json` | `plugin/.omp-plugin/`（宿主读仓根） |
-| 插件源码 | `plugin/src/` | 仓根 |
-| CI | `.github/workflows/` | 用户文档里贴 YAML 当安装步骤 |
-| 开发安装器 | `.sandbox/install-plugin.ts` | README 第一段 |
-| host stub | `plugin/types/host-ambient.d.ts` | 改宿主 ref_repos |
-| vendor checkout | `.vendor/`（gitignore） | 提交 oh-my-pi 源码 |
+| 可发布插件 | `plugin/` | 仓库根冒充包 |
+| npm 工作流 | `.github/workflows/release.yml` | push 工作流里 publish |
+| 用户安装说明 | 根 README 与 `plugin/README.md` 顶部 | 只写在 journal |
+| marketplace catalog | 不提交 | `.omp-plugin/marketplace.json` 当默认通道 |
+| 开发安装器 | `.sandbox/install-plugin.ts` | 用户 Quick start |
+| 支柱原文 | `docs/ssot/pillars/distribution-delivery/` | 改写用户原话 |
 
 ## 10. Task Packages and Acceptance Gates
 
 | Task ID | Objective | Modules | Key actions | Definition of Done | Required tests |
 | --- | --- | --- | --- | --- | --- |
-| T1 | catalog + 元数据 | Catalog, package | 写 marketplace.json、LICENSE、package 字段 | 对账脚本绿 | check-distribution-metadata |
-| T2 | README 官方入口 | README | 用户命令置顶；sandbox 标 dev | 陌生人只看 README 能装 | 人工读 + 隔离 install |
-| T3 | typecheck 去 .md 噪声 | tsconfig.plugin | stub + 改 npm script | `bun run typecheck` 0 | 本地跑 |
-| T4 | CI | workflows, linker | push/PR 测试；tag Release 无 npm | YAML 合法；本地复现测试步 | bun test 118+ |
-| T5 | 官方路径验证 | 隔离 PI_CONFIG_DIR | add + install + list | 证据写入 impl-notes；不碰 ~/.omp | 命令输出 |
-| T6 | 文档协议 | session-001, journal phase-006 | 原文入 log；work+docs 提交 | 哈希回填 | 无 |
+| T1 | 包可 publish | plugin 包 | 加 publishConfig；元数据脚本去 catalog | 检查脚本绿；`npm pack` 含 src | check-distribution-metadata |
+| T2 | 去掉无必要市场 | catalog | 删 `.omp-plugin/marketplace.json` | 文件不在 git | 搜索不到头条依赖 |
+| T3 | README 头条 | 用户文档 | 改成 npm 命令；sandbox 标开发 | 根与 plugin README 一致 | 人工对照 |
+| T4 | CI 保持 | CI | 不跑宿主 tsc；不跑 L6 | push/PR 仍测 plugin | `bun test` / typecheck |
+| T5 | tag publish 作业 | Release | 加 npm-publish；不在本轮 publish | YAML 存在；无真实 npm 发布记录 | 不 `npm publish` 本机 |
+| T6 | 官方路径取证 | 验证 | 隔离 HOME；dry-run scope；能则 pack+install | 警告与 list 证据写入 impl-notes | 不碰 `~/.omp` |
 
 ## 11. Sources and Confidence
 
 | Claim area | Source type | URL | Accessed at | Query used (if escalated) | Confidence |
 | --- | --- | --- | --- | --- | --- |
-| catalog 路径与字段 | Official docs | https://github.com/can1357/oh-my-pi/blob/main/docs/marketplace.md | 2026-08-15 | `oh-my-pi marketplace.json .omp-plugin` | H |
-| 作者发布步骤 | Official docs | https://github.com/can1357/oh-my-pi/blob/main/docs/skills/authoring-marketplaces.md | 2026-08-15 | `authoring marketplaces publishing workflow` | H |
-| --scope 仅市场 | Host code | `packages/coding-agent/src/cli/plugin-cli.ts` | 2026-08-15 | n/a | H |
-| 第三方 README 主路径 | GitHub | https://github.com/DarkPhilosophy/omp-headroom | 2026-08-15 | `omp-headroom marketplace install` | H |
-| PI_CONFIG_DIR 语义 | Host code | `packages/utils/src/dirs.ts` | 2026-08-15 | `PI_CONFIG_DIR getConfigDirName` | H |
+| npm 分类 | Primary code | `classify-install-target.ts:55-76` | 2026-08-15 | | H |
+| scope 忽略 | Primary code | `plugin-cli.ts:429-440` | 2026-08-15 | | H |
+| 用户根路径 | Primary code | `dirs.ts:521-535` | 2026-08-15 | | H |
+| TS 入口 | Official docs | `docs/skills/authoring-extensions.md` | 2026-08-15 | `oh-my-pi omp.extensions ts` | H |
+| 第三方 npm 头条 | Community | omp-notify-tool / omp-mode-switch | 2026-08-15 | `omp plugin install npm third party` | H |
+| trusted publisher | Official docs | 宿主 `ci.yml` + npm trusted publishers | 2026-08-15 | `npm trusted publishers GitHub Actions` | M |
+| 现场 help 与代码不一致 | Live CLI | `omp plugin --help` 17.3.4 | 2026-08-15 | | H |

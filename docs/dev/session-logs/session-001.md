@@ -1,7 +1,7 @@
 # Session 001: QOL-004 advisor docs
 
 **date**: 2026-08-15
-**commits**: `dda148b`, `475dfbd`, `49ea863`, `078f686`, `643e513`, `336d0ab`, `8feb59a`, `91f670b`, `bb88788`, `2a47408`, `4f688a2`, `49532a7`（`336d0ab` 起为 Turn 10–11 rework；`4f688a2`/`49532a7` 为 Turn 12 分发）
+**commits**: `dda148b`, `475dfbd`, `49ea863`, `078f686`, `643e513`, `336d0ab`, `8feb59a`, `91f670b`, `bb88788`, `2a47408`, `4f688a2`, `49532a7`, `ca4f512`（`336d0ab` 起为 Turn 10–11 rework；`4f688a2`/`49532a7` 为 Turn 12 分发；`ca4f512` 起为 Turn 13 分发重做）
 
 ## Turn 1
 
@@ -291,5 +291,92 @@
 - 工作树本地 `marketplace add` 会连 `plugin/node_modules` 一起 cp，Windows 上 EPERM；git clone 无此问题。
 
 **commit**: `4f688a2`（work：catalog / CI / 官方安装路径）、`49532a7`（docs 映射）
+
+## Turn 13
+
+### User
+
+> You are REDOING the entire omp-qol plugin packaging / official-install / publish / CI loop from scratch. The previous pass (commits 4f688a2 / 49532a7 / 9385267, agent a3efe740) is NOT authoritative. The author rejected its route and its rationale. Treat every claim it made as a hypothesis to falsify against host source and live CLI.
+>
+> Repo: C:\Users\15480\Desktop\AIWorkshop\repos\omp-qol (Windows, PowerShell — no heredoc; multi-line commit messages via temp file + `git commit -F`).
+> Host source of truth: C:\Users\15480\Desktop\AIWorkshop\ref_repos\oh-my-pi\
+>
+> ## Why the previous pass was rejected (author, 2026-08-15, VERBATIM — save as a second clarification under the existing distribution pillar, do not rewrite)
+>
+> > 不是, 那么为什么我们要维护这样一个marketplace呢? 而且你确定npm包和project scope有关系吗? 
+> > 没有key的阻塞点在我这里, 我后面打算直接给的啊, 这根本就不是问题.
+> > 我建议你重新全量进行你的任务.
+>
+> Three author constraints you MUST honor:
+> 1. **Do not invent a marketplace we have to maintain** unless host source proves that is the only / default-best-practice channel for a third-party plugin. The author is asking *why* we would maintain `.omp-plugin/marketplace.json` at all. If the honest answer is "we don't need to", remove it (or demote it to an optional extra) and put the default user path on the channel the host actually designed for third-party plugins.
+> 2. **Re-prove or retract the "npm has no project scope" claim.** The previous pass rejected npm-as-primary partly because "npm-only has no project scope". The author does not believe npm package and project scope are related. You must read the CURRENT host installer code (MarketplaceManager / `omp plugin install` / scope handling) and run the live CLI help + any relevant source paths. Quote file:line. If `--scope project` works for an npm target, the previous rationale is false and must be retracted in the research doc. If it does not, show the exact code path that refuses it — do not wave at "we already know".
+> 3. **Missing npm token is NOT a route-selection criterion.** The author will provide the key later. Design and implement the npm publish path (package.json publishConfig, files, CI release job gated on tag + secret, README user command `omp plugin install <npm-name>` or whatever the host actually accepts) as if the token will exist. Do NOT publish in this turn (no token yet). Do NOT use "we can't publish today" as a reason to pick a git-marketplace catalog instead.
+>
+> ## Required reading (skills first, then host, then our previous artifacts as suspects)
+>
+> Skills — read and follow:
+> - C:\Users\15480\.codex\skills\impl-route-clarifier\SKILL.md — redo the route report from zero. Previous Route B is one option to compare, not the incumbent.
+> - C:\Users\15480\.codex\skills\impl-route-guide-author\SKILL.md — rewrite the guide for the NEW selected route.
+> - C:\Users\15480\.codex\skills\github-master\SKILL.md
+> - C:\Users\15480\.agents\skills\technical-writing\SKILL.md
+> - Session protocol: SAME conversation as `docs/dev/session-logs/session-001.md`. Append a new turn with the author's verbatim rejection above. New sequential journal phase (inspect docs/dev/journal/; last was phase-006). Do not invent session-004.
+>
+> Host investigation (empirical, file:line or command output):
+> - `omp plugin --help`, `omp plugin install --help`, `omp marketplace --help` / `omp plugin marketplace --help`
+> - Host docs: extensions.md, extension-loading.md, plugin-manager-installer-plumbing.md, marketplace.md
+> - Host source: MarketplaceManager, installPlugin, how targets are parsed (npm name vs name@marketplace vs github: vs path), where `--scope` is honored, how npm packages are fetched (`bun add`? `npm pack`?), what a published package must contain
+> - How official / community plugins are installed TODAY. Search the host repo AND public oh-my-pi GitHub. If the default best practice for a third-party plugin is "publish to npm, user runs `omp plugin install <pkg>`", that is the answer — do not add a repo marketplace unless the host requires it as a sidecar.
+> - Sealed binary: does it load raw TS from the cached copy? What must `package.json#omp.extensions` point at? Is a build step required for npm or is shipping `src/**/*.ts` the host convention?
+> - `omp plugin upgrade` / update / doctor / uninstall — what identifiers they expect (npm name vs marketplace id)
+>
+> Previous-pass artifacts to re-evaluate (do not delete research history; supersede with a dated correction):
+> - `.omp-plugin/marketplace.json`
+> - `.github/workflows/ci.yml`, `release.yml`
+> - `plugin/package.json`, `plugin/README.md`, root README if any
+> - `docs/researches/*` distribution research, route report, implementor guide, design, impl-notes, pillar `docs/ssot/pillars/distribution-delivery/user-installable-plugin.md`
+>
+> ## Investigation questions that MUST be answered before any route is chosen
+>
+> A. What is the host's intended default install command for a third-party plugin published by an independent author in 2026?
+> B. Does `omp plugin install <npm-package-name>` work? Does it accept `--scope project`? Show the code path.
+> C. Does `omp plugin install <npm-package-name> --scope project` write project-local artifacts (`.omp/plugins/…`) or always user-global `~/.omp`?
+> D. Why would a plugin author maintain an in-repo `.omp-plugin/marketplace.json`? Is that for *consuming* a catalog of *other* plugins, or for *publishing* oneself? The previous pass used it as our publish channel (`marketplace add RatmmmhSquishyRat/omp-qol` then `install omp-qol@omp-qol`). Is that a first-class host feature or a workaround because they assumed npm was blocked?
+> E. If both npm and git-marketplace work, what is default best practice? Prefer the channel that (1) the host documents for third parties, (2) does not force every user to `marketplace add` our git repo, (3) supports the scopes users actually need.
+> F. Versioning: what name do `omp plugin list` / `config set` / `upgrade` use after an npm install vs a marketplace install?
+>
+> If host docs and code disagree, surface the tension; do not silently pick one.
+>
+> ## Deliverables (in order — investigation first)
+>
+> 1. **Corrected research** under `docs/researches/` (Chinese, technical-writing). Either a new dated research file or a clearly marked "更正 (2026-08-15 重做)" section at the top of the previous one. Retract or re-prove the npm↔scope claim with citations. Answer "why maintain a marketplace" honestly.
+> 2. **New route-clarifier report** (replace or supersede the old one). Select ONE default route. npm may well win. A git marketplace catalog may remain as an *optional* extra only if it costs little and is actually useful (e.g. installing from a git checkout without npm); it must not be the headline user path unless it is truly required.
+> 3. **Rewritten implementor guide** for the new route.
+> 4. **Implementation** to closed-loop default best practice:
+>    - Headline README install = the official user command (likely npm). The sandbox `.sandbox/install-plugin.ts` stays labeled in-repo dev/test only.
+>    - `plugin/package.json` complete for npm publish (name, version, repository, files, license, omp.extensions, engines if host requires). Decide the public npm name carefully (`omp-qol-plugin` vs scoped); check npm name availability if network allows; do not squat a name you cannot justify.
+>    - GitHub Actions: CI on push/PR (bun test, plugin-only tsc — not host ref_repos noise). Release/publish job on tag, wired for `NPM_TOKEN` (or npm trusted publisher) — job exists, does not run a real publish this turn.
+>    - If Route B's `.omp-plugin/marketplace.json` is NOT justified as default: remove it from the headline path. If you keep the file, document it as optional ("install from this git repo without npm") and make sure it does not contradict the npm identity (package name vs marketplace id vs settings key).
+>    - Do not invent a community-marketplace submission.
+> 5. **Verification**: `bun test` green; CI YAML valid; if you can exercise `omp plugin install` against a throwaway scratch (even a local packed tarball / `npm pack` of plugin/) to prove the official path + scope behavior, do it and record evidence. Never claim npm publish succeeded.
+> 6. Docs protocol + commits (work + docs-mapping, repo style) + push to origin/master.
+>
+> ## Integrity
+>
+> - Never weaken tests. Never touch repo-root `WATCHDOG.yml`. Never kill foreign omp processes. Do not `git init` test-workspace.
+> - Do not "fix" the previous pass by layering more marketplace machinery. Prefer deleting unjustified machinery.
+> - Token absence ≠ cannot implement the publish job.
+>
+> Report back: retracted claims (especially npm↔scope), why we do or do not maintain a marketplace, new default user install command, files added/removed, CI/publish job status, remaining human step (literally: "paste NPM_TOKEN / trusted publisher, then tag"), commit hashes, host-doc vs code tensions.
+
+### Agent Actions
+
+- 作者否决原文写入支柱第二条澄清；未改写原话。沿用 session-001，未发明 session-004。
+- 对照宿主 17.3.4：`classify-install-target.ts`、`plugin-cli.ts:429-440`、`PluginManager.install`、`getPluginsDir()`、`source-resolver.ts` npm 拒装、现场 `omp plugin --help`。`--scope` 对 npm 忽略并警告，写入仍是用户插件根。该**代码事实**保留；用它否决 npm 主通道的选路理由撤回。
+- 诚实回答「为什么维护 marketplace」：单插件作者不需要。catalog 是给维护插件目录的人用的。删除 `.omp-plugin/marketplace.json`。
+- 选路 A：`omp plugin install omp-qol-plugin`。token 不当否决条件。`npm view omp-qol-plugin` 404，沿用已有包名。
+- 实现：`publishConfig`、tag 上 `npm-publish` 作业、README 头条改 npm、元数据检查去 catalog。
+- 验证：`bun test` 118/118；typecheck 0；隔离 HOME 下 packed tarball 官方安装列出 `omp-qol-plugin@0.3.0`（npm 段）；`--scope project` 两次均 Ignoring；未写作者 `~/.omp/plugins/package.json`；未 npm publish。
+
+**commit**: `ca4f512`（work：删 catalog / npm 头条 / tag publish 作业）
 
 

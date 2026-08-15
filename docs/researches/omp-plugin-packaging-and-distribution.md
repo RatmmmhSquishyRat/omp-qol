@@ -2,6 +2,24 @@
 
 Date: 2026-08-15 · 宿主实测 `omp/17.3.4` · 源码对照 `ref_repos/oh-my-pi` · 访问日 2026-08-15
 
+## 更正 (2026-08-15 重做)
+
+作者否决了本文及同日 Route B 实现（commits `4f688a2` / `49532a7` / `9385267`）。本文整篇保留作调查史，**不再当作现行结论**。
+
+被撤回或降级的判断：
+
+1. 「第三方默认最佳实践是仓内 `.omp-plugin/marketplace.json`，用户先 `marketplace add` 再 `install name@marketplace`」——这是把「写 catalog 的人」的文档，当成了「发一个插件的人」的默认通道。宿主给独立作者的第一条命令是 `omp plugin install <npm-name>`。
+2. 「npm-only 没有 project scope，所以不能当主通道」——`--scope` 对 npm 会被忽略，这是宿主代码事实，见重做文 §B。把这件事当成「npm 包和 project scope 有关系、因此否决 npm」是选路错误。作者已点出这两件事不该绑在一起。
+3. 「没有 npm token，所以本轮不能选 npm」——token 由作者稍后提供，不是通道否决条件。
+
+现行调查、选路与实现指引：
+
+- `docs/researches/omp-plugin-packaging-and-distribution-2026-08-15-redo.md`
+- `docs/plans/routes/plugin-distribution-clarification-report.md`
+- `docs/plans/guides/plugin-distribution-implementor-guide.md`
+
+---
+
 本文回答的问题：仓库外的用户今天要怎样安装一个第三方 omp 插件，以及 omp-qol 现有的 `.sandbox/install-plugin.ts` 和这条官方路径差在哪里。
 
 ## 1. 背景
