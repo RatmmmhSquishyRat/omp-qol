@@ -1,7 +1,7 @@
 # Session 001: QOL-004 advisor docs
 
 **date**: 2026-08-15
-**commits**: `dda148b`, `475dfbd`, `49ea863`, `078f686`, `643e513`, `336d0ab`, `8feb59a`, `91f670b`, `bb88788`, `2a47408`（`336d0ab` 起为 Turn 10–11 rework）
+**commits**: `dda148b`, `475dfbd`, `49ea863`, `078f686`, `643e513`, `336d0ab`, `8feb59a`, `91f670b`, `bb88788`, `2a47408`, `4f688a2`（`336d0ab` 起为 Turn 10–11 rework；`4f688a2` 起为 Turn 12 分发）
 
 ## Turn 1
 
@@ -209,5 +209,87 @@
 - **test-workspace 锚安全发现**：`test-workspace/` 无自己的 `.git` → 宿主 `repo.root()` 上溯到 omp-qol 仓库根，只读探针证实从 test-workspace（含 `demo-mini-app/`）内启动的会话做 project-scope advisor 写操作会命中**生产文件** `C:\...\omp-qol\WATCHDOG.yml`（6 advisor）。这是宿主自身的锚定语义（TUI 同理），非插件缺陷；操作红线已写入 journal：advisor 写操作测试一律用 git-init 的 scratch 工作区（现有 e2e harness 均已如此），不从 test-workspace 发起。未擅自 `git init` test-workspace——是否让其会话看到仓库 6 advisor 属用户域决策，留由作者裁定。
 
 **commit**: `2a47408`（docs 求真 + run-170912 证据；随后一枚小映射 commit 回填本哈希）
+
+## Turn 12
+
+### User
+
+> You own the full investigation → research → design → implement → verify loop for making omp-qol a real, user-installable omp plugin (packaging, official install, publish, CI). The parent conversation established that today there is NO npm publish, NO GitHub Actions, and the only install path is a hand-rolled project-local copier (`.sandbox/install-plugin.ts`) that replicates MarketplaceManager artifacts under `test-workspace/.omp/plugins/`. That is a developer/acceptance hack, not a user-facing distribution.
+>
+> Repo: C:\Users\15480\Desktop\AIWorkshop\repos\omp-qol (Windows, PowerShell — no heredoc; multi-line commit messages via temp file + `git commit -F`). Host source of truth: C:\Users\15480\Desktop\AIWorkshop\ref_repos\oh-my-pi\
+>
+> ## User pillar (save VERBATIM, do not rewrite)
+>
+> The user's message of 2026-08-15 is a new project pillar. Save it verbatim (blockquote the original Chinese) in the right place under `docs/ssot/pillars/` — this is about **distribution completeness so other users can actually use the plugin**, not a design draft. Suggested location: a new file under a distribution/delivery pillar folder (inspect existing pillar tree first; create the right folder if none fits). One-line scope note beneath the quote is OK; never alter the quote.
+>
+> Verbatim:
+>
+> > 这说明我们之前根本就没有对于打包发布和正式的omp plugin安装流程进行完整的调查搜索了解和在项目中的搭建. 对于这个项目, 这块内容需要被完整, 才能够让其他用户正常使用. 你们应当首先进行充分调查, 落盘research以及相关默认最佳实践, 得出打包发布部署方案, 然后完整设计实现验证, 直到项目状态达到完美, 所有相关代码和配置等等内容根据默认最佳实践闭环.
+>
+> ## Required reading (do this FIRST, before writing any plan or code)
+>
+> Skills (read and follow):
+> - C:\Users\15480\.codex\skills\impl-route-clarifier\SKILL.md — use this BEFORE choosing a publish/install route. Functional requirement is clear (other users can install and use); the route (npm vs host marketplace vs git vs GitHub Release vs combination) is NOT. Produce the route-clarifier report as the skill requires.
+> - C:\Users\15480\.codex\skills\impl-route-guide-author\SKILL.md — after the route is selected, write the implementor-facing guide.
+> - C:\Users\15480\.codex\skills\github-master\SKILL.md — GitHub collaboration / CI / publish gates.
+> - C:\Users\15480\.agents\skills\technical-writing\SKILL.md — Chinese research/design docs, evidence-backed, not marketing.
+> - User session-log protocol: docs/dev/ exists. This is the SAME conversation as session-001.md (do not invent session-004). Append a new turn to session-001.md with the user's verbatim message. After commits, map hashes. Write a new sequential journal phase (inspect docs/dev/journal/ — last was phase-005).
+>
+> Existing project material you MUST read before researching:
+> - plugin/README.md, plugin/package.json, .sandbox/install-plugin.ts
+> - docs/researches/omp-project-scoped-plugins.md (covers the LOCAL project-scope hack; it is NOT the official user-install story)
+> - docs/plans/TDDs/qol-delivery-test-plan.md if present
+> - Host docs in ref_repos/oh-my-pi: docs/extensions.md, extension-loading.md, plugin-manager-installer-plumbing.md, marketplace.md, and the actual installer/marketplace source (MarketplaceManager, `omp plugin install`, scope user vs project, how marketplace entries are published, whether npm is even the channel).
+> - Host CLI: `omp plugin --help` and any `omp marketplace` commands — run them.
+> - Search the host repo and the public oh-my-pi GitHub for how official/community plugins are published and installed TODAY (2026). Do not invent a channel the host does not support.
+>
+> ## Investigation mandate (must be empirical)
+>
+> Answer with source evidence (file:line or command output), not guesses:
+> 1. What is the official end-user install command for a third-party omp plugin in 2026? (`omp plugin install <what>` — npm name? git URL? marketplace id? local path?)
+> 2. What artifacts must a plugin package contain (package.json `omp` key, entry points, lockfile, settings schema)? Compiled JS vs raw TS? Does the sealed installed binary load TS from a cache copy?
+> 3. How do official/community plugins get INTO a marketplace the host reads? Is there a public registry, a GitHub marketplace index, npm `@oh-my-pi/*`, or only user-added marketplace URLs?
+> 4. What does `omp plugin install <local-path>` actually do (we already know `--scope project` is ignored for local paths — confirm current host code, and what the supported user-scope local/git/npm paths are)?
+> 5. Versioning, updates (`omp plugin update`), uninstall, doctor — what must we emit for those to work?
+> 6. GitHub Actions / CI: what is the host project's own CI pattern? What should ours gate (bun test 118, plugin-only tsc)? Publish must be a separate manual/tag job — never auto-publish on every push. L6 e2e (real models, secrets, cost) stays OUT of default CI.
+> 7. Secrets/safety: never commit tokens; never modify the repo-root WATCHDOG.yml (user production, 6 advisors); never kill omp processes you did not spawn; test-workspace has NO .git so a project-scope advisor mutate from inside it resolves to the production WATCHDOG.yml — do not `git init` it unless the author later asks.
+>
+> If host docs and code disagree, surface the tension; do not silently pick one.
+>
+> ## Deliverables (in this order — do not skip ahead to code)
+>
+> 1. **Research doc** under `docs/researches/` (Chinese, technical-writing skill): official omp plugin packaging + install + marketplace + publish, with evidence, and a "default best-practice" section for a third-party plugin in 2026. Explicitly state what our current `.sandbox/install-plugin.ts` path is (dev-only) vs what end users need.
+> 2. **Route-clarifier report** (impl-route-clarifier skill) comparing viable channels with evidence-backed tradeoffs (npm-only, host marketplace, git URL, GitHub Release tarball, hybrid). Select ONE recommended route. Do not implement before this is written.
+> 3. **Implementor guide** (impl-route-guide-author skill) for the selected route: files to add, package.json fields, CI workflows, versioning, user-facing install commands, pitfalls.
+> 4. **Design note** under `docs/plans/designs/` if the change is non-trivial (CI + package metadata + maybe a real marketplace entry + README install rewrite + keeping the local installer as a dev path).
+> 5. **Implementation** of the selected route until the project is closed-loop by default best practice:
+>    - User-facing install path that a stranger can follow from the README (real command, not "run our sandbox script").
+>    - GitHub Actions CI on push/PR: bun test in plugin/, and a typecheck that does NOT fail on host ref_repos .md-import noise (plugin src/test only).
+>    - Publish/release path matching the selected route (tag-triggered or documented manual steps). If a step requires a secret the repo does not have (npm token, marketplace API key), implement everything that can be committed, document the exact remaining human step, and do NOT fake a publish.
+>    - README rewritten so the FIRST install section is the official user path; keep the sandbox installer clearly labeled as the in-repo dev/test path.
+>    - package.json completeness (name, version, repository, files, omp.extensions, license, engines if required).
+>    - Any required marketplace manifest / repo metadata the host actually reads.
+> 6. **Verification**: full `bun test` still 118+ green; CI workflow validated (`actionlint` if available, or `act` dry, or at least YAML + a local reproduction of the CI script). If you can run `omp plugin install` against a throwaway scratch dir for the official path, do it and record evidence. Never claim publish succeeded if it did not.
+> 7. **Docs protocol**: session-001 new turn (verbatim user message), journal phase, impl-notes if you have a qol-delivery notes file or a new one. Commit in the repo's established style (work commit + docs-mapping commit). Push to origin/master when the loop is honestly closed — or push the research+CI+metadata even if a human secret is still required, and say so clearly.
+>
+> ## Integrity
+>
+> - Investigation first. Writing CI YAML before you know the host's install channel is the failure mode this task exists to prevent.
+> - Never weaken tests. Never touch production WATCHDOG.yml. Never kill foreign omp processes.
+> - If a "perfect" public publish is blocked on a credential or an upstream marketplace we cannot write to, the honest closed loop is: research + selected route + all committed artifacts + CI + a README that tells a stranger the exact working install command + a short "remaining human step" list. Do not invent a fake marketplace listing.
+>
+> Report back: route chosen and why, files added, user-facing install command, CI status, what was actually published (if anything), remaining human steps, commit hashes, any host-doc vs host-code tensions.
+
+### Agent Actions
+
+- 支柱原文写入 `docs/ssot/pillars/distribution-delivery/user-installable-plugin.md`（先看现有 pillar 树：只有 advisor/mode 与 initiative，新建 distribution-delivery）。
+- 读 clarifier / guide-author / github-master / technical-writing；对照宿主 docs + `plugin-cli.ts` / `classify-install-target.ts` / `MarketplaceManager` / `cachePlugin`；本机 `omp/17.3.4`。
+- 结论：官方通道是 npm / git / local-link / `name@marketplace`；`--scope` 只对市场生效；无中央投稿市场；市场 npm source 拒装；本仓根无 package.json，git URL 装不了 `plugin/`。
+- 路线选 B（仓内 catalog，`source: "./plugin"`）。否决 npm-only（无 token）和 git/Release 主路径（布局不匹配）。
+- 实现：catalog、LICENSE、package 元数据、plugin-only typecheck、CI/Release 工作流、README 官方安装置顶、sandbox 标 dev。
+- 验证：`bun test` 118/118；`bun run typecheck` 0；隔离 `PI_CONFIG_DIR` 下官方 install 列出 `omp-qol@omp-qol (0.3.0) (user)`；未碰 `~/.omp`；未 npm publish。
+- 工作树本地 `marketplace add` 会连 `plugin/node_modules` 一起 cp，Windows 上 EPERM；git clone 无此问题。
+
+**commit**: `4f688a2`（work：catalog / CI / 官方安装路径）
 
 
