@@ -70,27 +70,50 @@ export function registerGoalTool(pi: ExtensionAPI): void {
 		}),
 		async execute(_toolCallId, params, signal, onUpdate, ctx) {
 			const args = params as Record<string, unknown>;
-			if (signal?.aborted) {
-				return { content: [{ type: "text", text: "Cancelled" }], isError: true };
-			}
+			const op = String(args.op);
+
+			// Unified JSON envelope, same shape as the advisor and mode tools:
+			//   success: { ok:true,  tool:"goal", op, message, details?, warnings: [] }
+			//   failure: { ok:false, tool:"goal", op, error, action? }
+			const fail = (error: string, action?: string) => {
+				const body: Record<string, unknown> = { ok: false, tool: GOAL_TOOL_NAME, op, error };
+				if (action) body.action = action;
+				return { content: [{ type: "text" as const, text: JSON.stringify(body, null, 2) }], details: body, isError: true };
+			};
+
+			if (signal?.aborted) return fail("Cancelled: the tool call was aborted before it ran.");
 
 			const invoke = ctx.invokeTool;
 			if (!invoke) {
 				// Host has no native goal tool of this name (goal.enabled off,
 				// restricted tool mode, or older host). Fail with guidance, not a throw.
-				return { content: [{ type: "text", text: NATIVE_UNAVAILABLE_MESSAGE }], isError: true };
+				return fail(NATIVE_UNAVAILABLE_MESSAGE);
 			}
 
 			try {
 				// Same-tool delegation: runs the native goal tool with its own
 				// session wiring; inherits this call's approval, not re-gated.
-				return await invoke(args, { signal, onUpdate });
+				const result = await invoke(args, { signal, onUpdate });
+				const text = (result.content ?? [])
+					.filter((block): block is { type: "text"; text: string } => block?.type === "text")
+					.map(block => block.text)
+					.join("\n");
+				if (result.isError) return fail(text || `goal ${op} failed.`);
+				const body: Record<string, unknown> = { ok: true, tool: GOAL_TOOL_NAME, op, message: text };
+				if (result.details !== undefined) {
+					// Keep the native details in the envelope when serializable.
+					try {
+						JSON.stringify(result.details);
+						body.details = result.details;
+					} catch {
+						/* non-serializable native details stay out of the JSON body */
+					}
+				}
+				body.warnings = [];
+				return { content: [{ type: "text" as const, text: JSON.stringify(body, null, 2) }], details: body };
 			} catch (err) {
 				const detail = err instanceof Error ? err.message : String(err);
-				return {
-					content: [{ type: "text", text: `goal ${String(args.op)} failed: ${detail}` }],
-					isError: true,
-				};
+				return fail(`goal ${op} failed: ${detail}`);
 			}
 		},
 	});

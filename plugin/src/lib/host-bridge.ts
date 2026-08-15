@@ -14,17 +14,49 @@
  * returns `null`.
  */
 
-/** Minimal advisor stat as returned by getAdvisorStats(). */
+/** Token totals as the host aggregates them per advisor. */
+export interface LiveAdvisorTokenTotals {
+	input: number;
+	output: number;
+	reasoning: number;
+	cacheRead: number;
+	cacheWrite: number;
+	total: number;
+}
+
+/** Message counts as the host aggregates them per advisor. */
+export interface LiveAdvisorMessageCounts {
+	user: number;
+	assistant: number;
+	total: number;
+}
+
+/**
+ * One advisor's stat entry, mirroring the host's `PerAdvisorStat`
+ * (session-advisors.ts). Live runtimes carry full token/cost/message data;
+ * skeleton entries (disabled / no_model / quota_exhausted) carry zeroed
+ * counters and omit `model`/`sessionId`. The host's `model` is a Model
+ * object (`{provider, id}`), not a string.
+ */
 export interface LiveAdvisorStat {
 	name: string;
 	status: string;
 	model?: { id?: string; provider?: string } | string | unknown;
-	tools?: string[];
+	contextWindow?: number;
+	contextTokens?: number;
+	tokens?: LiveAdvisorTokenTotals;
+	cost?: number;
+	messages?: LiveAdvisorMessageCounts;
+	sessionId?: string;
 }
 
-/** Minimal shape returned by session.getAdvisorStats(). */
+/**
+ * Shape read from session.getAdvisorStats(). The host also returns a
+ * `configured` field, but it merely mirrors the session enable flag
+ * (`#advisorEnabled`) — the tool reports `enabled` from isAdvisorEnabled()
+ * instead and does not read `configured` at all.
+ */
 export interface LiveAdvisorStats {
-	configured: boolean;
 	active: boolean;
 	advisors: LiveAdvisorStat[];
 }

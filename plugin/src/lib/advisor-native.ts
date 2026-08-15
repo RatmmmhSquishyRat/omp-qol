@@ -16,12 +16,37 @@ import {
 	loadWatchdogConfigFile,
 	resolveAdvisorConfigEditPath,
 	saveWatchdogConfigFile,
+	slugifyAdvisorName,
 	type AdvisorConfig,
 	type WatchdogConfigDoc,
 } from "@oh-my-pi/pi-coding-agent/advisor/config";
+import { BUILTIN_TOOL_NAMES, normalizeToolNames } from "@oh-my-pi/pi-coding-agent/tools/builtin-names";
 import { getAgentDir, repo } from "@oh-my-pi/pi-coding-agent";
 
 export type { AdvisorConfig, WatchdogConfigDoc };
+
+/**
+ * The host's own advisor-name slugifier (advisor/config.ts): lowercase,
+ * non-[a-z0-9] runs collapse to "-", trimmed; names with NO ascii letters
+ * or digits (e.g. pure CJK) all fall back to the shared slug "advisor".
+ * Re-exported so the tool's name matching can never drift from discovery.
+ */
+export function nativeSlugifyAdvisorName(name: string): string {
+	return slugifyAdvisorName(name);
+}
+
+/**
+ * The host's tool-name normalizer (lowercase + legacy aliases + dedupe,
+ * first-seen order) and the built-in name list — the exact inputs the host's
+ * discovery-time `filterAdvisorTools` uses to drop unknown names.
+ */
+export function nativeNormalizeToolNames(names: Iterable<string>): string[] {
+	return normalizeToolNames(names);
+}
+
+export function nativeBuiltinToolNames(): readonly string[] {
+	return BUILTIN_TOOL_NAMES;
+}
 
 /** Discover + merge advisors from user + project WATCHDOG files. */
 export async function nativeDiscoverAdvisors(

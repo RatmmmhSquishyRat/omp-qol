@@ -67,8 +67,19 @@ export function registerModeTool(pi: ExtensionAPI, options?: ModeToolOptions): v
 	// hosts — research §7). Exit must mirror the matching path.
 	let vibeScope: { parent: Record<string, unknown>; ownerScope: unknown; via: "registry" | "tools" } | null = null;
 
-	const err = (text: string) => ({ content: [{ type: "text" as const, text }], isError: true });
-	const ok = (text: string) => ({ content: [{ type: "text" as const, text }] });
+	// Unified JSON envelope, same shape as the advisor and goal tools:
+	//   success: { ok:true,  tool:"mode", op, ...fields, message, warnings: [] }
+	//   failure: { ok:false, tool:"mode", op, error, action? }
+	const fail = (op: string, error: string, action?: string) => {
+		const body: Record<string, unknown> = { ok: false, tool: MODE_TOOL_NAME, op, error };
+		if (action) body.action = action;
+		return { content: [{ type: "text" as const, text: JSON.stringify(body, null, 2) }], details: body, isError: true };
+	};
+	const succeed = (op: string, message: string, fields?: Record<string, unknown>) => {
+		const body: Record<string, unknown> = { ok: true, tool: MODE_TOOL_NAME, op, ...fields, message };
+		if (!("warnings" in body)) body.warnings = [];
+		return { content: [{ type: "text" as const, text: JSON.stringify(body, null, 2) }], details: body };
+	};
 
 	// Plan proposals (`xd://propose`) must never strand plan mode; ACP's
 	// fallback auto-approves for clients without elicitation. Same idea:
@@ -109,20 +120,27 @@ export function registerModeTool(pi: ExtensionAPI, options?: ModeToolOptions): v
 				.describe("Optional objective/directive echoed into the plan_enter or vibe_enter result"),
 		}),
 		async execute(_toolCallId, params, signal) {
-			if (signal?.aborted) return err("Cancelled");
+			const p = params as ModeParams;
+			const opName = String(p.op);
+			if (signal?.aborted) return fail(opName, "Cancelled: the tool call was aborted before it ran.");
 
 			const bridge = await resolveBridge().catch(() => null);
-			if (!bridge) return err(BRIDGE_UNAVAILABLE);
+			if (!bridge) return fail(opName, BRIDGE_UNAVAILABLE);
 			const s = bridge.session;
-			const p = params as ModeParams;
 
 			switch (p.op) {
 				case "plan_enter": {
-					if (s.getPlanModeState?.()?.enabled) return ok("Plan mode is already active.");
-					if (s.getVibeModeState?.()?.enabled) return err("Vibe mode is active. Exit it first (mode vibe_exit).");
-					if (goalActive(s)) return err("A goal is active. Complete or drop it first (goal op=complete or op=drop).");
+					if (s.getPlanModeState?.()?.enabled) {
+						return succeed("plan_enter", "Plan mode is already active.", { mode: "plan", active: true, alreadyActive: true });
+					}
+					if (s.getVibeModeState?.()?.enabled) {
+						return fail("plan_enter", "Vibe mode is active; plan and vibe are mutually exclusive.", "Exit it first: mode vibe_exit.");
+					}
+					if (goalActive(s)) {
+						return fail("plan_enter", "A goal is active; modes are blocked while a goal runs.", "Complete or drop it first: goal op=complete or op=drop.");
+					}
 					if (s.settings?.get?.("plan.enabled") === false) {
-						return err("Plan mode is disabled in settings (plan.enabled).");
+						return fail("plan_enter", "Plan mode is disabled in settings (plan.enabled=false).", "Ask the user to enable plan.enabled in omp settings.");
 					}
 					// Same shape as the host's own non-TUI switch (ACP #applyModeChange).
 					const previous = s.getPlanModeState?.() as
@@ -135,28 +153,38 @@ export function registerModeTool(pi: ExtensionAPI, options?: ModeToolOptions): v
 						reentry: previous !== undefined,
 					});
 					s.setPlanProposalHandler?.(planProposalHandler);
-					return ok(
+					return succeed(
+						"plan_enter",
 						`Plan mode is now ACTIVE${p.objective?.trim() ? ` — objective: ${p.objective.trim()}` : ""}. ` +
 							"The host's plan-mode guard makes the working tree read-only except the plan file " +
 							"(PLAN.md / local:// paths). Draft the plan, then call mode plan_exit.",
+						{ mode: "plan", active: true },
 					);
 				}
 				case "plan_exit": {
-					if (!s.getPlanModeState?.()?.enabled) return err("Plan mode is not active.");
+					if (!s.getPlanModeState?.()?.enabled) return fail("plan_exit", "Plan mode is not active; nothing to exit.");
 					s.setPlanProposalHandler?.(null);
 					s.setPlanModeState?.(undefined);
-					return ok(
+					return succeed(
+						"plan_exit",
 						"Plan mode exited; the working tree is writable again. " +
 							"Present the plan to the user and get confirmation before implementing.",
+						{ mode: "plan", active: false },
 					);
 				}
 				case "vibe_enter": {
-					if (s.getVibeModeState?.()?.enabled) return ok("Vibe mode is already active.");
-					if (s.getPlanModeState?.()?.enabled) return err("Plan mode is active. Exit it first (mode plan_exit).");
-					if (goalActive(s)) return err("A goal is active. Complete or drop it first (goal op=complete or op=drop).");
+					if (s.getVibeModeState?.()?.enabled) {
+						return succeed("vibe_enter", "Vibe mode is already active.", { mode: "vibe", active: true, alreadyActive: true });
+					}
+					if (s.getPlanModeState?.()?.enabled) {
+						return fail("vibe_enter", "Plan mode is active; plan and vibe are mutually exclusive.", "Exit it first: mode plan_exit.");
+					}
+					if (goalActive(s)) {
+						return fail("vibe_enter", "A goal is active; modes are blocked while a goal runs.", "Complete or drop it first: goal op=complete or op=drop.");
+					}
 					const registryPath = Boolean(bridge.vibeRegistry && bridge.vibeRegistryTrusted);
 					const toolsPath = !registryPath && typeof injectedRoot?.VibeListTool === "function" && typeof injectedRoot.VibeKillTool === "function";
-					if (!registryPath && !toolsPath) return err(VIBE_UNTRUSTED_REGISTRY);
+					if (!registryPath && !toolsPath) return fail("vibe_enter", VIBE_UNTRUSTED_REGISTRY);
 					const parent = buildVibeParentSession(s);
 					let ownerScope: unknown = null;
 					if (registryPath) {
@@ -177,15 +205,17 @@ export function registerModeTool(pi: ExtensionAPI, options?: ModeToolOptions): v
 					await s.activateVibeTools?.(base);
 					s.setVibeModeState?.({ enabled: true });
 					vibeScope = { parent, ownerScope, via: registryPath ? "registry" : "tools" };
-					return ok(
+					return succeed(
+						"vibe_enter",
 						`Vibe (director) mode is now ACTIVE${p.objective?.trim() ? ` — directive: ${p.objective.trim()}` : ""}. ` +
 							"Your toolset is now only read/todo/vibe_* plus this mode tool. " +
 							"Direct persistent workers with vibe_spawn / vibe_send / vibe_wait / vibe_kill / vibe_list; " +
 							"verify their results by reading touched files; call mode vibe_exit when the outcome is reached.",
+						{ mode: "vibe", active: true },
 					);
 				}
 				case "vibe_exit": {
-					if (!s.getVibeModeState?.()?.enabled) return err("Vibe mode is not active.");
+					if (!s.getVibeModeState?.()?.enabled) return fail("vibe_exit", "Vibe mode is not active; nothing to exit.");
 					let killed = 0;
 					if (vibeScope?.via === "registry" && bridge.vibeRegistry) {
 						// Same sequence as InteractiveMode.#exitVibeMode.
@@ -217,16 +247,23 @@ export function registerModeTool(pi: ExtensionAPI, options?: ModeToolOptions): v
 					s.setVibeModeState?.(undefined);
 					vibeScope = null;
 					vibePreviousTools = null;
-					return ok(
+					return succeed(
+						"vibe_exit",
 						killed > 0
 							? `Vibe mode exited; killed ${killed} worker session${killed === 1 ? "" : "s"}; previous toolset restored.`
 							: "Vibe mode exited; previous toolset restored.",
+						{ mode: "vibe", active: false, killed },
 					);
 				}
 				default: {
-					const plan = s.getPlanModeState?.()?.enabled;
-					const vibe = s.getVibeModeState?.()?.enabled;
-					return ok(`plan: ${plan ? "on" : "off"} | vibe: ${vibe ? "on" : "off"} | goal: ${goalActive(s) ? "active" : "none"}`);
+					const plan = Boolean(s.getPlanModeState?.()?.enabled);
+					const vibe = Boolean(s.getVibeModeState?.()?.enabled);
+					const goal = goalActive(s) ? "active" : "none";
+					return succeed(
+						"status",
+						`plan: ${plan ? "on" : "off"} | vibe: ${vibe ? "on" : "off"} | goal: ${goal}`,
+						{ plan, vibe, goal },
+					);
 				}
 			}
 		},

@@ -16,6 +16,14 @@ interface ToolResult {
 	isError?: boolean;
 }
 
+/** Parse the unified JSON envelope from a result's text. */
+function parseEnvelope<T = Record<string, unknown>>(result: ToolResult): T {
+	const text = result.content[0]?.text ?? "";
+	const start = text.indexOf("{");
+	if (start < 0) throw new Error(`no JSON in result text: ${text}`);
+	return JSON.parse(text.slice(start)) as T;
+}
+
 function makeModePi() {
 	const tools: Array<{ definition: Record<string, unknown> }> = [];
 	const api = {
@@ -444,15 +452,32 @@ describe("vibe mode (sealed host, injected live tool classes)", () => {
 // =============================================================================
 
 describe("status / bridge / registration", () => {
-	test("N8: status reads live host state", async () => {
+	test("N8: status reads live host state (structured envelope)", async () => {
 		const pi = makeModePi();
 		const { bridge, fake } = makeNativeBridge();
 		registerModeTool(pi.api as never, { resolveBridge: async () => bridge });
 		const tool = pi.modeTool();
-		expect((await tool.execute("c", { op: "status" })).content[0].text).toBe("plan: off | vibe: off | goal: none");
+
+		const off = parseEnvelope<{ ok: boolean; tool: string; op: string; plan: boolean; vibe: boolean; goal: string; message: string }>(
+			await tool.execute("c", { op: "status" }),
+		);
+		expect(off.ok).toBe(true);
+		expect(off.tool).toBe("mode");
+		expect(off.op).toBe("status");
+		expect(off.plan).toBe(false);
+		expect(off.vibe).toBe(false);
+		expect(off.goal).toBe("none");
+		expect(off.message).toBe("plan: off | vibe: off | goal: none");
+
 		fake.state.plan = { enabled: true };
 		fake.state.goal = { enabled: true, goal: { status: "active" } };
-		expect((await tool.execute("c", { op: "status" })).content[0].text).toBe("plan: on | vibe: off | goal: active");
+		const on = parseEnvelope<{ plan: boolean; vibe: boolean; goal: string; message: string }>(
+			await tool.execute("c", { op: "status" }),
+		);
+		expect(on.plan).toBe(true);
+		expect(on.vibe).toBe(false);
+		expect(on.goal).toBe("active");
+		expect(on.message).toBe("plan: on | vibe: off | goal: active");
 	});
 
 	test("N9: no bridge -> honest unavailability, nothing emulated", async () => {
@@ -474,7 +499,9 @@ describe("status / bridge / registration", () => {
 		controller.abort();
 		const result = await pi.modeTool().execute("c", { op: "plan_enter" }, controller.signal);
 		expect(result.isError).toBe(true);
-		expect(result.content[0].text).toBe("Cancelled");
+		const parsed = parseEnvelope<{ ok: boolean; error: string }>(result);
+		expect(parsed.ok).toBe(false);
+		expect(parsed.error).toContain("Cancelled");
 	});
 
 	test("N11: registration shape — one 'mode' tool, read-tier, essential, marked", () => {
@@ -499,12 +526,12 @@ describe("status / bridge / registration", () => {
 // =============================================================================
 
 describe("factory kill switch (mode tool)", () => {
-	// test/setup.ts (bun preload) froze the host's config root onto this dir
-	// before any host module loaded (the pi-utils DirResolver pins it at first
-	// module load per process). Hardcoded rather than read from process.env:
-	// earlier test files may shift PI_CONFIG_DIR at runtime, but the frozen
-	// resolver keeps pointing here. Shared with goal-tool.test.ts.
-	const testRoot = path.join(os.homedir(), ".omp-qol-test-root");
+	// test/setup.ts (bun preload) froze the host's config root onto the
+	// pid-scoped isolation root (.omp-qol-test-root-<pid>) before any host
+	// module loaded (the pi-utils DirResolver pins it at first module load per
+	// process). The env value is stable for the whole process after preload,
+	// so reading it in beforeAll is safe. Shared with goal-tool.test.ts.
+	let testRoot = "";
 
 	function writeLock(settings: Record<string, unknown>): void {
 		const lock = { plugins: {}, settings: { "omp-qol-plugin": settings } };
@@ -513,9 +540,7 @@ describe("factory kill switch (mode tool)", () => {
 	}
 
 	beforeAll(() => {
-		// Re-assert for the plugin's own dynamic lockfile fallback (loadSettings
-		// reads PI_CONFIG_DIR per call, unlike the host's frozen resolver).
-		process.env.PI_CONFIG_DIR = ".omp-qol-test-root";
+		testRoot = path.join(os.homedir(), process.env.PI_CONFIG_DIR!);
 	});
 
 	afterAll(() => {

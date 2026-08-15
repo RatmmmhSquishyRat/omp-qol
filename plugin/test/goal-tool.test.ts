@@ -142,12 +142,20 @@ function getGoalTool(pi: ReturnType<typeof makePiMock>) {
 	};
 }
 
+/** Parse the unified JSON envelope from a result's text. */
+function parseEnvelope<T = Record<string, unknown>>(result: { content: Array<{ type: string; text?: string }> }): T {
+	const text = result.content[0]?.text ?? "";
+	const start = text.indexOf("{");
+	if (start < 0) throw new Error(`no JSON in result text: ${text}`);
+	return JSON.parse(text.slice(start)) as T;
+}
+
 // =============================================================================
 // A. Delegation contract
 // =============================================================================
 
 describe("delegation contract", () => {
-	test("A1: create forwards params verbatim and passes the native result through", async () => {
+	test("A1: create forwards params verbatim and wraps the native result in the envelope", async () => {
 		const pi = makePiMock();
 		registerGoalTool(pi.api as never);
 		const tool = getGoalTool(pi);
@@ -157,7 +165,20 @@ describe("delegation contract", () => {
 			invokeTool: p => native.invoke(p),
 		});
 		expect(native.calls).toEqual([params]);
-		expect(result.details).toEqual({
+		const parsed = parseEnvelope<{
+			ok: boolean;
+			tool: string;
+			op: string;
+			message: string;
+			details: unknown;
+			warnings: unknown[];
+		}>(result);
+		expect(parsed.ok).toBe(true);
+		expect(parsed.tool).toBe("goal");
+		expect(parsed.op).toBe("create");
+		expect(parsed.message).toContain("Ship QOL-001");
+		// Native details are preserved inside the envelope (and mirrored to details).
+		expect(parsed.details).toEqual({
 			op: "create",
 			goal: expect.objectContaining({ objective: "Ship QOL-001", tokenBudget: 50000, status: "active" }),
 			remainingTokens: null,
@@ -180,7 +201,7 @@ describe("delegation contract", () => {
 		expect(native.calls).toEqual([{ op: "get" }, { op: "complete" }]);
 	});
 
-	test("A3: native goal record in details is preserved exactly", async () => {
+	test("A3: native goal record in the envelope's details is preserved exactly", async () => {
 		const pi = makePiMock();
 		registerGoalTool(pi.api as never);
 		const tool = getGoalTool(pi);
@@ -190,8 +211,8 @@ describe("delegation contract", () => {
 		const result = await tool.execute("call-get", { op: "get" }, undefined, undefined, {
 			invokeTool: p => native.invoke(p),
 		});
-		const details = result.details as { goal: GoalRec };
-		expect(details.goal).toEqual((created.details as { goal: GoalRec }).goal);
+		const parsed = parseEnvelope<{ details: { goal: GoalRec } }>(result);
+		expect(parsed.details.goal).toEqual((created.details as { goal: GoalRec }).goal);
 	});
 });
 
@@ -200,14 +221,18 @@ describe("delegation contract", () => {
 // =============================================================================
 
 describe("error surfacing", () => {
-	test("B1: missing invokeTool -> actionable error, no throw", async () => {
+	test("B1: missing invokeTool -> actionable error envelope, no throw", async () => {
 		const pi = makePiMock();
 		registerGoalTool(pi.api as never);
 		const tool = getGoalTool(pi);
 		const result = await tool.execute("call-x", { op: "get" }, undefined, undefined, {});
 		expect(result.isError).toBe(true);
-		expect(result.content[0].text).toBe(NATIVE_UNAVAILABLE_MESSAGE);
-		expect(result.content[0].text).toContain("goal.enabled");
+		const parsed = parseEnvelope<{ ok: boolean; tool: string; op: string; error: string }>(result);
+		expect(parsed.ok).toBe(false);
+		expect(parsed.tool).toBe("goal");
+		expect(parsed.op).toBe("get");
+		expect(parsed.error).toBe(NATIVE_UNAVAILABLE_MESSAGE);
+		expect(parsed.error).toContain("goal.enabled");
 	});
 
 	test("B2: native state error surfaces with native message", async () => {
@@ -251,7 +276,9 @@ describe("error surfacing", () => {
 			invokeTool: p => native.invoke(p),
 		});
 		expect(result.isError).toBe(true);
-		expect(result.content[0].text).toBe("Cancelled");
+		const parsed = parseEnvelope<{ ok: boolean; error: string }>(result);
+		expect(parsed.ok).toBe(false);
+		expect(parsed.error).toContain("Cancelled");
 		expect(native.calls.length).toBe(0);
 	});
 });
@@ -300,12 +327,12 @@ describe("registration", () => {
 });
 
 describe("factory kill switch (isolated lockfile)", () => {
-	// test/setup.ts (bun preload) froze the host's config root onto this dir
-	// before any host module loaded — write the lockfile where the host's
-	// frozen resolver actually reads it. Hardcoded rather than read from
-	// process.env: earlier test files may shift PI_CONFIG_DIR at runtime,
-	// but the frozen resolver keeps pointing here.
-	const testRoot = path.join(os.homedir(), ".omp-qol-test-root");
+	// test/setup.ts (bun preload) froze the host's config root onto the
+	// pid-scoped isolation root (.omp-qol-test-root-<pid>) before any host
+	// module loaded — write the lockfile where the host's frozen resolver
+	// actually reads it. The env value is stable for the whole process after
+	// preload, so reading it in beforeAll is safe.
+	let testRoot = "";
 
 	function writeLock(settings: Record<string, unknown>): void {
 		const lock = { plugins: {}, settings: { "omp-qol-plugin": settings } };
@@ -314,9 +341,7 @@ describe("factory kill switch (isolated lockfile)", () => {
 	}
 
 	beforeAll(() => {
-		// Re-assert for the plugin's own dynamic lockfile fallback (loadSettings
-		// reads PI_CONFIG_DIR per call, unlike the host's frozen resolver).
-		process.env.PI_CONFIG_DIR = ".omp-qol-test-root";
+		testRoot = path.join(os.homedir(), process.env.PI_CONFIG_DIR!);
 	});
 
 	afterAll(() => {

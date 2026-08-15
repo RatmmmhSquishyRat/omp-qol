@@ -100,6 +100,31 @@ SSOT amend, if any, waits for this ADR **plus** implementation
 evidence, and must mark the old hot-apply uncertainty as superseded
 rather than silently editing the pillar.
 
+### Amendment (2026-08-15) — per-op approval tiering replaces `approval: "read"`
+
+The original decision text above declared `approval: "read"` for the
+whole tool. That is superseded (the text above is preserved, not
+rewritten, per SSOT rules).
+
+- **What changed**: the tool now declares a *dynamic* approval —
+  `approval: (args) => READ_OPS.has(args.op) ? "read" : "write"`.
+  Read-only ops (`list`, `get`, `status`, `dump`) stay `"read"`;
+  mutate and runtime ops (`upsert`, `remove`, `set_shared`, `apply`,
+  `enable`, `disable`) are `"write"`.
+- **Mechanism evidence**: the host's `ToolApproval` type
+  (`packages/agent/src/types.ts`) is
+  `ToolApprovalDecision | ((args: unknown) => ToolApprovalDecision)` —
+  per-call dynamic tiering is a first-class host contract, so no
+  static-tier tradeoff was needed.
+- **Rationale** (6-model adversarial review consensus, 2026-08-15):
+  mutate ops write or delete `WATCHDOG.yml` files and `enable` starts
+  billable advisor runtimes; the host contract reserves `"read"` for
+  read-only operations. A blanket `"read"` tier let file writes and
+  runtime starts ride through approval gates that auto-approve reads.
+- **Test impact**: L1 registration tests (advisor-tool.test.ts A16 and
+  the factory registration test) now assert the split tiering instead
+  of pinning `"read"`.
+
 ## Decision 6 — Advisor sanity is independent of plan/vibe
 
 `resolveHostBridge` today refuses a session that lacks plan/vibe

@@ -2,9 +2,13 @@
  * L3: Real AgentSession integration tests for the advisor tool.
  *
  * Uses a real AgentSession + SessionManager + AgentRegistry, with a temporary
- * WATCHDOG.yml dir and PI_CONFIG_DIR isolated from the developer's ~/.omp.
+ * WATCHDOG.yml dir and PI_CONFIG_DIR isolated from the developer's ~/.omp
+ * (frozen by test/setup.ts preload before any host module loads).
  *
- * Covers Foundation gates F1–F7 that can be automated (TDD §I1–I9).
+ * Covers Foundation gates F1–F7 that can be automated (TDD §I1–I9), the
+ * implicit-default lifecycle (I10), multi-advisor runtime evidence (I11), and
+ * a full advisor streaming round-trip with scripted advisor models (I12):
+ * advise → steer into the primary transcript + per-advisor JSONL transcripts.
  *
  * NOT covered here: F8 (real LLM e2e, requires OMPQOL_RELAY_PROVIDERS, optional).
  *
@@ -17,7 +21,7 @@ import * as path from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
 import { type } from "@oh-my-pi/omptype";
 import { Agent, type AgentTool } from "@oh-my-pi/pi-agent-core";
-import { createMockModel } from "@oh-my-pi/pi-ai/providers/mock";
+import { createMockModel, type MockModel } from "@oh-my-pi/pi-ai/providers/mock";
 import { getBundledModel } from "@oh-my-pi/pi-catalog/models";
 import { AgentRegistry } from "@oh-my-pi/pi-coding-agent/registry/agent-registry";
 import { AgentSession } from "@oh-my-pi/pi-coding-agent/session/agent-session";
@@ -36,9 +40,9 @@ import { resolveHostBridge } from "../src/lib/host-bridge";
 // =============================================================================
 
 // Config-root isolation comes from test/setup.ts (bun preload), which froze
-// PI_CONFIG_DIR onto ~/.omp-qol-test-root before any host module loaded.
-// (Setting it here in beforeAll was too late for the host's DirResolver —
-// this file's static host imports freeze the root before hooks run.)
+// PI_CONFIG_DIR onto a pid-scoped ~/.omp-qol-test-root-<pid> before any host
+// module loaded. (Setting it here in beforeAll was too late for the host's
+// DirResolver — this file's static host imports freeze the root before hooks.)
 
 // =============================================================================
 // Real-native wrapper: uses the actual advisor-native helpers but overrides
@@ -55,6 +59,9 @@ function makeIsolatedNative(agentDir: string): NativeHelpers {
 		nativeLoadConfigFile: (fp) => advisorNative.nativeLoadConfigFile(fp),
 		nativeSaveConfigFile: (fp, doc) => advisorNative.nativeSaveConfigFile(fp, doc),
 		nativeDiscoverAdvisors: (cwd, aDir) => advisorNative.nativeDiscoverAdvisors(cwd, aDir),
+		nativeSlugifyAdvisorName: (name) => advisorNative.nativeSlugifyAdvisorName(name),
+		nativeNormalizeToolNames: (names) => advisorNative.nativeNormalizeToolNames(names),
+		nativeBuiltinToolNames: () => advisorNative.nativeBuiltinToolNames(),
 	};
 }
 
@@ -62,12 +69,67 @@ function makeIsolatedNative(agentDir: string): NativeHelpers {
 // Harness
 // =============================================================================
 
+interface ToolResult {
+	content: Array<{ type: string; text?: string }>;
+	isError?: boolean;
+}
+
 interface AdvisorToolHandle {
-	execute: (
-		toolCallId: string,
-		params: Record<string, unknown>,
-		signal?: AbortSignal,
-	) => Promise<{ content: Array<{ type: string; text?: string }>; isError?: boolean }>;
+	execute: (toolCallId: string, params: Record<string, unknown>, signal?: AbortSignal) => Promise<ToolResult>;
+}
+
+/** Parse the JSON envelope from a result's text (skips a summary line if present). */
+function parseEnvelope<T = Record<string, unknown>>(result: ToolResult): T {
+	const text = result.content[0]?.text ?? "";
+	const start = text.indexOf("{");
+	if (start < 0) throw new Error(`no JSON in result text: ${text}`);
+	return JSON.parse(text.slice(start)) as T;
+}
+
+/** Envelope slice for mutate-op results (upsert/remove/set_shared/apply). */
+interface MutateEnvelope {
+	ok: boolean;
+	op: string;
+	persisted: boolean;
+	fileDeleted: boolean;
+	applied: boolean;
+	effectiveAt: "immediate" | "stored" | "none";
+	source: string;
+	removed?: number;
+	verification: {
+		enabled: boolean;
+		active: boolean;
+		activeCount: number;
+		advisors: Array<{ name: string; status: string; model?: string }>;
+	};
+	warnings: string[];
+}
+
+/** Poll `predicate` up to `timeoutMs`; returns silently on timeout so the
+ *  caller's subsequent expect() fails with the real observed state. */
+async function waitFor(predicate: () => boolean, timeoutMs: number): Promise<void> {
+	const deadline = Date.now() + timeoutMs;
+	while (Date.now() < deadline) {
+		if (predicate()) return;
+		await new Promise((r) => setTimeout(r, 100));
+	}
+}
+
+interface HarnessOptions {
+	projectCwd?: string;
+	/**
+	 * When true the session gets a PERSISTENT SessionManager opened on
+	 * `<tmp>/primary-session.jsonl` (exposed as Harness.sessionFile). Advisor
+	 * transcript recorders derive their JSONL path from getSessionFile(), which
+	 * is null for the default in-memory manager — so streaming tests need this.
+	 */
+	persistentSession?: boolean;
+	/** streamFn given to ALL advisor runtimes (dispatch per advisor inside). */
+	advisorStreamFn?: unknown;
+	/** Primary-agent mock; defaults to a single scripted "done" response. */
+	primaryMock?: MockModel;
+	/** Set advisor.syncBacklog="1" so a primary turn awaits advisor catch-up. */
+	syncBacklog?: boolean;
 }
 
 interface Harness {
@@ -80,6 +142,8 @@ interface Harness {
 	agentDir: string;
 	watchdogPath: string;
 	userWatchdogPath: string;
+	/** Set when persistentSession was requested. */
+	sessionFile?: string;
 }
 
 function makeDummyTool(name: string): AgentTool {
@@ -94,12 +158,12 @@ function makeDummyTool(name: string): AgentTool {
 	};
 }
 
-async function makeRealAdvisorSession(projectCwd?: string): Promise<Harness> {
+async function makeRealAdvisorSession(options: HarnessOptions = {}): Promise<Harness> {
 	const model = getBundledModel("anthropic", "claude-sonnet-4-5");
 	if (!model) throw new Error("bundled anthropic model missing");
 
 	const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "qol-l3-adv-"));
-	const projectDir = projectCwd ?? tmp;
+	const projectDir = options.projectCwd ?? tmp;
 	const agentDir = path.join(tmp, "agent");
 	fs.mkdirSync(agentDir, { recursive: true });
 	// Initialize a git repo so repo.root() resolves correctly
@@ -134,7 +198,7 @@ async function makeRealAdvisorSession(projectCwd?: string): Promise<Harness> {
 	const def = captured[0].definition;
 
 	const readTool = makeDummyTool("read");
-	const mock = createMockModel({ responses: [{ content: [{ type: "text", text: "done" }] }] });
+	const mock = options.primaryMock ?? createMockModel({ responses: [{ content: [{ type: "text", text: "done" }] }] });
 	// Note: no PI_CODING_AGENT_DIR env needed; agentDir is injected via resolveNative.
 	const agent = new Agent({
 		getApiKey: () => "test-key",
@@ -151,18 +215,29 @@ async function makeRealAdvisorSession(projectCwd?: string): Promise<Harness> {
 	authStorage.setRuntimeApiKey("anthropic", "test-key");
 	const modelRegistry = new ModelRegistry(authStorage, path.join(tmp, `models-${Snowflake.next()}.yml`));
 
+	let sessionFile: string | undefined;
+	let sessionManager: SessionManager;
+	if (options.persistentSession) {
+		sessionFile = path.join(tmp, "primary-session.jsonl");
+		sessionManager = await SessionManager.open(sessionFile, undefined, undefined, { initialCwd: projectDir });
+	} else {
+		sessionManager = SessionManager.inMemory(projectDir);
+	}
+
 	const session = new AgentSession({
 		agent,
-		sessionManager: SessionManager.inMemory(projectDir),
+		sessionManager,
 		settings: Settings.isolated({
 			"compaction.enabled": false,
 			"retry.enabled": false,
 			"advisor.enabled": false,
+			...(options.syncBacklog ? { "advisor.syncBacklog": "1" } : {}),
 		}),
 		modelRegistry,
 		toolRegistry: new Map<string, AgentTool>([["read", readTool]]),
 		builtInToolNames: ["read"],
 		advisorTools: [],
+		...(options.advisorStreamFn ? { advisorStreamFn: options.advisorStreamFn } : {}),
 	} as never);
 
 	const registryId = `qol-l3-adv-${Snowflake.next()}`;
@@ -184,6 +259,7 @@ async function makeRealAdvisorSession(projectCwd?: string): Promise<Harness> {
 		agentDir,
 		watchdogPath,
 		userWatchdogPath,
+		sessionFile,
 	};
 }
 
@@ -240,7 +316,7 @@ describe("I2: upsert while enabled → runtime appears without restart (F2)", ()
 	let h: Harness | undefined;
 	afterEach(async () => { await teardownHarness(h); h = undefined; });
 
-	test("upsert + enable → isAdvisorActive; name in stats", async () => {
+	test("upsert + enable → isAdvisorActive; runtime in stats; verification carries evidence", async () => {
 		h = await makeRealAdvisorSession();
 
 		// Enable first
@@ -249,19 +325,37 @@ describe("I2: upsert while enabled → runtime appears without restart (F2)", ()
 		const result = await h.tool.execute("t", {
 			op: "upsert",
 			name: "LiveBot",
+			model: "anthropic/claude-haiku-4-5",
 			instructions: "Watch for issues",
 		});
 		expect(result.isError).toBeUndefined();
 
-		// advisor is active (enabled + configured)
+		// Live session state: enabled AND active (a runtime is actually running).
 		expect(h.session.isAdvisorEnabled()).toBe(true);
+		expect(h.session.isAdvisorActive()).toBe(true);
+		const stats = h.session.getAdvisorStats();
+		expect(stats.active).toBe(true);
+		const live = stats.advisors.find((a) => a.name === "LiveBot");
+		expect(live).toBeDefined();
+		expect(live!.status).toBe("running");
+
 		// File exists
 		expect(fs.existsSync(h.watchdogPath)).toBe(true);
-		// Verification in result
-		const parsed = JSON.parse(result.content[0].text!) as { verification: { enabled: boolean }; persisted: boolean; applied: boolean };
+
+		// Envelope evidence: truthful flags + verification mirrors the live stats.
+		const parsed = parseEnvelope<MutateEnvelope>(result);
+		expect(parsed.ok).toBe(true);
 		expect(parsed.persisted).toBe(true);
 		expect(parsed.applied).toBe(true);
+		expect(parsed.fileDeleted).toBe(false);
+		expect(parsed.effectiveAt).toBe("immediate");
 		expect(parsed.verification.enabled).toBe(true);
+		expect(parsed.verification.active).toBe(true);
+		expect(parsed.verification.activeCount).toBeGreaterThanOrEqual(1);
+		const verified = parsed.verification.advisors.find((a) => a.name === "LiveBot");
+		expect(verified).toBeDefined();
+		expect(verified!.status).toBe("running");
+		expect(verified!.model).toBe("anthropic/claude-haiku-4-5");
 	});
 });
 
@@ -273,20 +367,40 @@ describe("I3: second upsert changes values; verification reflects new (F3)", () 
 	let h: Harness | undefined;
 	afterEach(async () => { await teardownHarness(h); h = undefined; });
 
-	test("upsert twice; second upsert overrides model+instructions", async () => {
+	test("upsert twice; second upsert replaces the runtime (new model in stats)", async () => {
 		h = await makeRealAdvisorSession();
 		h.session.setAdvisorEnabled(true);
 
 		await h.tool.execute("t1", { op: "upsert", name: "Changer", model: "anthropic/claude-haiku-4-5", instructions: "v1" });
-		const result2 = await h.tool.execute("t2", { op: "upsert", name: "Changer", model: "openai/gpt-4o-mini", instructions: "v2" });
+		const statsV1 = h.session.getAdvisorStats();
+		const liveV1 = statsV1.advisors.find((a) => a.name === "Changer");
+		expect(liveV1).toBeDefined();
+		expect(liveV1!.status).toBe("running");
+		expect(JSON.stringify(liveV1!.model)).toContain("haiku");
+
+		const result2 = await h.tool.execute("t2", { op: "upsert", name: "Changer", model: "anthropic/claude-sonnet-4-5", instructions: "v2" });
 		expect(result2.isError).toBeUndefined();
 
-		// File on disk should reflect v2
+		// File on disk should reflect v2, with NO duplicate entries.
 		const content = fs.readFileSync(h.watchdogPath, "utf8");
 		expect(content).toContain("v2");
-		expect(content).toContain("gpt-4o-mini");
-		// No duplicate "Changer" entries
+		expect(content).toContain("claude-sonnet-4-5");
 		expect((content.match(/name: Changer/g) ?? []).length).toBe(1);
+
+		// Live stats containment: exactly ONE Changer runtime, now on the NEW model.
+		const statsV2 = h.session.getAdvisorStats();
+		const changers = statsV2.advisors.filter((a) => a.name === "Changer");
+		expect(changers.length).toBe(1);
+		expect(changers[0].status).toBe("running");
+		expect(JSON.stringify(changers[0].model)).toContain("sonnet");
+		expect(JSON.stringify(changers[0].model)).not.toContain("haiku");
+
+		// Envelope verification mirrors the replaced runtime.
+		const parsed = parseEnvelope<MutateEnvelope>(result2);
+		const verified = parsed.verification.advisors.find((a) => a.name === "Changer");
+		expect(verified).toBeDefined();
+		expect(verified!.model).toBe("anthropic/claude-sonnet-4-5");
+		expect(verified!.status).toBe("running");
 	});
 });
 
@@ -326,7 +440,7 @@ describe("I5: persist while disabled; enable starts latest roster (F5)", () => {
 	let h: Harness | undefined;
 	afterEach(async () => { await teardownHarness(h); h = undefined; });
 
-	test("upsert while disabled: file persisted, active=false; enable makes advisor active", async () => {
+	test("upsert while disabled: persisted + stored, not active; enable starts the runtime", async () => {
 		h = await makeRealAdvisorSession();
 
 		// Ensure disabled
@@ -334,21 +448,38 @@ describe("I5: persist while disabled; enable starts latest roster (F5)", () => {
 		expect(disableRes.isError).toBeUndefined();
 
 		// Upsert while disabled
-		const upsertRes = await h.tool.execute("t1", { op: "upsert", name: "WhenDisabled" });
+		const upsertRes = await h.tool.execute("t1", { op: "upsert", name: "WhenDisabled", model: "anthropic/claude-haiku-4-5" });
 		expect(upsertRes.isError).toBeUndefined();
 		// File should exist
 		expect(fs.existsSync(h.watchdogPath)).toBe(true);
-		// Verification says active=false
-		const parsed = JSON.parse(upsertRes.content[0].text!) as { verification: { active: boolean; enabled: boolean } };
-		expect(parsed.verification.enabled).toBe(false);
-		// Warning mentions disabled
-		const warnings = (JSON.parse(upsertRes.content[0].text!) as { warnings: string[] }).warnings;
-		expect(warnings.some((w: string) => w.toLowerCase().includes("disabled"))).toBe(true);
 
-		// Enable — advisor tool must NOT call discover here (ADR-005 §D3)
+		// Truthful semantics: persisted but NOT effective yet (stored until enable).
+		const parsed = parseEnvelope<MutateEnvelope>(upsertRes);
+		expect(parsed.persisted).toBe(true);
+		expect(parsed.effectiveAt).toBe("stored");
+		expect(parsed.verification.enabled).toBe(false);
+		expect(parsed.verification.active).toBe(false);
+		expect(parsed.verification.activeCount).toBe(0);
+		expect(parsed.warnings.some((w) => w.includes("session flag is OFF") && w.includes("op=enable"))).toBe(true);
+		expect(h.session.isAdvisorActive()).toBe(false);
+
+		// Enable — advisor tool must NOT call discover here (ADR-005 §D3); the
+		// host starts the roster stored by the upsert above.
 		const enableRes = await h.tool.execute("t2", { op: "enable" });
 		expect(enableRes.isError).toBeUndefined();
 		expect(h.session.isAdvisorEnabled()).toBe(true);
+		expect(h.session.isAdvisorActive()).toBe(true);
+		const stats = h.session.getAdvisorStats();
+		const started = stats.advisors.find((a) => a.name === "WhenDisabled");
+		expect(started).toBeDefined();
+		expect(started!.status).toBe("running");
+
+		// Enable envelope carries the roster summary as evidence.
+		const en = parseEnvelope<{ enabled: boolean; active: boolean; activeCount: number; advisors: Array<{ name: string; status: string }> }>(enableRes);
+		expect(en.enabled).toBe(true);
+		expect(en.active).toBe(true);
+		expect(en.activeCount).toBeGreaterThanOrEqual(1);
+		expect(en.advisors.some((a) => a.name === "WhenDisabled" && a.status === "running")).toBe(true);
 	});
 });
 
@@ -360,24 +491,38 @@ describe("I6: unknown tool name → warning; live roster unaffected (F6)", () =>
 	let h: Harness | undefined;
 	afterEach(async () => { await teardownHarness(h); h = undefined; });
 
-	test("upsert with tools=[unknown_tool] succeeds with warning or applies without unknown tool", async () => {
+	test("upsert with tools=[unknown] persists verbatim, warns about the default-subset fallback", async () => {
 		h = await makeRealAdvisorSession();
 		h.session.setAdvisorEnabled(true);
 
 		// First, establish a known-good advisor
-		await h.tool.execute("t0", { op: "upsert", name: "GoodBot" });
+		await h.tool.execute("t0", { op: "upsert", name: "GoodBot", model: "anthropic/claude-haiku-4-5" });
 
 		// Now upsert with an invalid tool name
 		const result = await h.tool.execute("t1", {
 			op: "upsert",
 			name: "BadToolBot",
+			model: "anthropic/claude-haiku-4-5",
 			tools: ["nonexistent_tool_xyz"],
 		});
-		// Should either warn or succeed (native drops unknown tools silently)
-		// Crucially, it must not be a hard error that corrupts the live roster
-		// (the existing GoodBot should still be in the stats after apply)
 		expect(result.isError).toBeUndefined();
-		// GoodBot should still be accessible via list
+
+		// Probed host semantics: the file keeps the unknown name VERBATIM, but
+		// discovery drops unknown names; an all-unknown list collapses to
+		// undefined → the advisor falls back to the host's default tool subset.
+		// The tool must surface that as a warning (F6).
+		const parsed = parseEnvelope<MutateEnvelope>(result);
+		expect(
+			parsed.warnings.some((w) => w.includes("nonexistent_tool_xyz") && w.includes("falls back to the DEFAULT")),
+		).toBe(true);
+		const fileContent = fs.readFileSync(h.watchdogPath, "utf8");
+		expect(fileContent).toContain("nonexistent_tool_xyz");
+
+		// The live roster is unaffected: BOTH advisors run (BadToolBot with the
+		// default subset), and GoodBot is still listed.
+		const stats = h.session.getAdvisorStats();
+		expect(stats.advisors.find((a) => a.name === "GoodBot")?.status).toBe("running");
+		expect(stats.advisors.find((a) => a.name === "BadToolBot")?.status).toBe("running");
 		const list = await h.tool.execute("t2", { op: "list", scope: "effective" });
 		expect(list.content[0].text).toContain("GoodBot");
 	});
@@ -403,7 +548,7 @@ describe("I7: session persistence — file survives new session (F7)", () => {
 		expect(fs.existsSync(h.watchdogPath)).toBe(true);
 
 		// New session on same projectDir — file should still be there
-		h2 = await makeRealAdvisorSession(h.projectDir);
+		h2 = await makeRealAdvisorSession({ projectCwd: h.projectDir });
 		const list = await h2.tool.execute("t2", { op: "list", scope: "project" });
 		expect(list.content[0].text).toContain("Persistent");
 	});
@@ -477,10 +622,9 @@ describe("I8: subdirectory cwd → edit path at repo root", () => {
 			expect(result.isError).toBeUndefined();
 			// The WATCHDOG.yml must be at tmp2 (the git root), NOT at subdir
 			const expectedPath = path.join(tmp2, "WATCHDOG.yml");
-			const content = result.content[0].text ?? "";
 			expect(fs.existsSync(expectedPath)).toBe(true);
 			// source in result should point to project root path
-			const parsed = JSON.parse(content) as { source: string };
+			const parsed = parseEnvelope<MutateEnvelope>(result);
 			expect(parsed.source).toContain(tmp2);
 			expect(parsed.source).not.toContain("nested");
 		} finally {
@@ -502,7 +646,7 @@ describe("I10: implicit default advisor lifecycle via the tool", () => {
 	let h: Harness | undefined;
 	afterEach(async () => { await teardownHarness(h); h = undefined; });
 
-	test("empty roster → stats show 'default'; upsert enabled=false pauses it; remove restores implicit", async () => {
+	test("empty roster → 'default' running; upsert enabled=false pauses it; remove restores implicit", async () => {
 		h = await makeRealAdvisorSession();
 
 		// (1) Enable with zero configured advisors → host runs the implicit legacy default.
@@ -511,11 +655,22 @@ describe("I10: implicit default advisor lifecycle via the tool", () => {
 		let stats = h.session.getAdvisorStats();
 		expect(stats.advisors.length).toBe(1);
 		expect(stats.advisors[0].name).toBe("default");
+		expect(stats.advisors[0].status).toBe("running");
 
-		// list effective surfaces the implicit-default note (visible to the agent).
+		// list effective surfaces the synthetic implicit-default entry (decision 2).
 		const list = await h.tool.execute("t1", { op: "list", scope: "effective" });
 		expect(list.isError).toBeUndefined();
-		expect(list.content[0].text).toContain("implicit");
+		const listBody = parseEnvelope<{ advisors: Array<{ name: string; implicit?: boolean }>; implicitDefault?: boolean; note?: string }>(list);
+		expect(listBody.implicitDefault).toBe(true);
+		expect(listBody.advisors).toEqual([{ name: "default", implicit: true }]);
+		expect(listBody.note).toBeTruthy();
+
+		// get name=default scope=effective returns the same synthetic entry.
+		const got = await h.tool.execute("t1b", { op: "get", name: "default", scope: "effective" });
+		expect(got.isError).toBeUndefined();
+		const gotBody = parseEnvelope<{ advisor: { name: string; implicit?: boolean }; implicitDefault?: boolean }>(got);
+		expect(gotBody.implicitDefault).toBe(true);
+		expect(gotBody.advisor).toEqual({ name: "default", implicit: true });
 
 		// (2) Per-advisor toggle: materialize with enabled=false → paused, still visible.
 		const off = await h.tool.execute("t2", { op: "upsert", name: "default", enabled: false });
@@ -525,13 +680,13 @@ describe("I10: implicit default advisor lifecycle via the tool", () => {
 		expect(stats.advisors[0].name).toBe("default");
 		expect(stats.advisors[0].status).toBe("paused");
 
-		// (3) Remove the entry → file entry gone → implicit default resurfaces un-paused.
+		// (3) Remove the entry → file entry gone → implicit default resurfaces running.
 		const rm = await h.tool.execute("t3", { op: "remove", name: "default" });
 		expect(rm.isError).toBeUndefined();
 		stats = h.session.getAdvisorStats();
 		expect(stats.advisors.length).toBe(1);
 		expect(stats.advisors[0].name).toBe("default");
-		expect(stats.advisors[0].status).not.toBe("paused");
+		expect(stats.advisors[0].status).toBe("running");
 	});
 
 	test("upsert bare default → normalized away (mirrors TUI Save); no WATCHDOG entry left", async () => {
@@ -539,8 +694,9 @@ describe("I10: implicit default advisor lifecycle via the tool", () => {
 
 		const result = await h.tool.execute("t0", { op: "upsert", name: "default" });
 		expect(result.isError).toBeUndefined();
-		const parsed = JSON.parse(result.content[0].text!) as { warnings: string[] };
-		expect(parsed.warnings.some(w => w.includes("not persisted"))).toBe(true);
+		const parsed = parseEnvelope<MutateEnvelope>(result);
+		expect(parsed.warnings.some((w) => w.includes("not persisted"))).toBe(true);
+		expect(parsed.persisted).toBe(false);
 
 		// The project WATCHDOG must not contain a bare default entry.
 		if (fs.existsSync(h.watchdogPath)) {
@@ -548,6 +704,173 @@ describe("I10: implicit default advisor lifecycle via the tool", () => {
 			expect(content).not.toContain("name: default");
 		}
 	});
+});
+
+// =============================================================================
+// I11: multi-advisor runtime — two upserts + enable → TWO live runtimes with
+// distinct models; parallel upserts on the same file both survive (per-path
+// mutate serialization). This is the direct evidence for the "multi-advisor
+// works at runtime" claim the 6-model review found unproven.
+// =============================================================================
+
+describe("I11: two advisors run concurrently; parallel upserts both survive", () => {
+	let h: Harness | undefined;
+	afterEach(async () => { await teardownHarness(h); h = undefined; });
+
+	test("Promise.all upserts land both entries; enable → activeCount=2, both running, distinct models", async () => {
+		h = await makeRealAdvisorSession();
+
+		// Parallel upserts against the SAME WATCHDOG.yml — the per-path mutate
+		// chain must serialize them so neither read-modify-write clobbers the other.
+		const [r1, r2] = await Promise.all([
+			h.tool.execute("t1", { op: "upsert", name: "Alpha", model: "anthropic/claude-haiku-4-5", instructions: "a" }),
+			h.tool.execute("t2", { op: "upsert", name: "Beta", model: "anthropic/claude-sonnet-4-5", instructions: "b" }),
+		]);
+		expect(r1.isError).toBeUndefined();
+		expect(r2.isError).toBeUndefined();
+		const fileContent = fs.readFileSync(h.watchdogPath, "utf8");
+		expect(fileContent).toContain("name: Alpha");
+		expect(fileContent).toContain("name: Beta");
+
+		// Enable → both runtimes start.
+		const en = await h.tool.execute("t3", { op: "enable" });
+		expect(en.isError).toBeUndefined();
+		const enBody = parseEnvelope<{ activeCount: number; advisors: Array<{ name: string; status: string; model?: string }> }>(en);
+		expect(enBody.activeCount).toBe(2);
+
+		expect(h.session.isAdvisorActive()).toBe(true);
+		const stats = h.session.getAdvisorStats();
+		expect(stats.advisors.length).toBe(2);
+		const alpha = stats.advisors.find((a) => a.name === "Alpha");
+		const beta = stats.advisors.find((a) => a.name === "Beta");
+		expect(alpha).toBeDefined();
+		expect(beta).toBeDefined();
+		expect(alpha!.status).toBe("running");
+		expect(beta!.status).toBe("running");
+		// Distinct models actually resolved per advisor.
+		expect(JSON.stringify(alpha!.model)).toContain("haiku");
+		expect(JSON.stringify(beta!.model)).toContain("sonnet");
+
+		// status op passes the same evidence through the envelope.
+		const status = await h.tool.execute("t4", { op: "status" });
+		const stBody = parseEnvelope<{ activeCount: number; advisors: Array<{ name: string; status: string; model?: string }> }>(status);
+		expect(stBody.activeCount).toBe(2);
+		expect(stBody.advisors.find((a) => a.name === "Alpha")?.model).toBe("anthropic/claude-haiku-4-5");
+		expect(stBody.advisors.find((a) => a.name === "Beta")?.model).toBe("anthropic/claude-sonnet-4-5");
+	});
+});
+
+// =============================================================================
+// I12: L3 streaming — real AgentSession, scripted advisor streams via the
+// host's `advisorStreamFn` seam (agent-session.ts → session-advisors options).
+// Two advisors each emit a unique-marker blocker advise; the host steers the
+// advisories into the primary transcript. A persistent SessionManager (NOT
+// inMemory — its getSessionFile() is null so recorders would skip writes)
+// makes AdvisorTranscriptRecorder persist `<sessionStem>/__advisor.<slug>.jsonl`.
+// A paused advisor must produce NO transcript.
+// =============================================================================
+
+describe("I12: advisor advise streams reach the primary; transcripts persisted", () => {
+	let h: Harness | undefined;
+	afterEach(async () => { await teardownHarness(h); h = undefined; });
+
+	test("two advisors' markers reach the primary; __advisor.<slug>.jsonl written; paused advisor silent", async () => {
+		// Distinctive, content-bearing notes: the host's AdvisorEmissionGuard
+		// suppresses content-free filler ("ok", "no issues"), so markers ride
+		// inside realistic advice sentences. Severity "blocker" delivers even
+		// against in-progress-update withholding, and steers when the primary
+		// is idle (resolveAdvisorDeliveryChannel).
+		const MARKER_ALPHA = "Verify the retry cap in loader.ts before merging (ref QOL-MARK-ALPHA-7431).";
+		const MARKER_BETA = "Missing await on writeStream.end() can lose buffered writes (ref QOL-MARK-BETA-9182).";
+
+		// Each advisor's scripted model: one advise tool call, then plain text
+		// for every later review turn (constructor responses → fallback handler).
+		const alphaMock = createMockModel({
+			responses: [
+				{ content: [{ type: "toolCall", name: "advise", arguments: { note: MARKER_ALPHA, severity: "blocker" } }] },
+			],
+			handler: { content: ["Alpha review turn complete."] },
+		});
+		const betaMock = createMockModel({
+			responses: [
+				{ content: [{ type: "toolCall", name: "advise", arguments: { note: MARKER_BETA, severity: "blocker" } }] },
+			],
+			handler: { content: ["Beta review turn complete."] },
+		});
+		// One advisorStreamFn serves ALL advisor runtimes; dispatch on the
+		// advisor's resolved model (Alpha=haiku, Beta=sonnet).
+		const advisorStreamFn = (model: { id?: string }, context: unknown, options?: unknown) =>
+			(model?.id ?? "").includes("haiku")
+				? alphaMock.stream(model as never, context as never, options as never)
+				: betaMock.stream(model as never, context as never, options as never);
+
+		// Primary mock: one scripted answer for the user prompt, then a fallback
+		// for the turns the steered blocker advisories trigger.
+		const primaryMock = createMockModel({
+			responses: [{ content: [{ type: "text", text: "Initial answer from the primary." }] }],
+			handler: { content: ["Acknowledged the advisory."] },
+		});
+
+		h = await makeRealAdvisorSession({
+			persistentSession: true,
+			advisorStreamFn,
+			primaryMock,
+			syncBacklog: true, // primary turn awaits advisor catch-up (advisor.syncBacklog="1")
+		});
+
+		// Roster: two live advisors with distinct models + one paused advisor.
+		await h.tool.execute("t1", { op: "upsert", name: "Alpha", model: "anthropic/claude-haiku-4-5" });
+		await h.tool.execute("t2", { op: "upsert", name: "Beta", model: "anthropic/claude-sonnet-4-5" });
+		await h.tool.execute("t3", { op: "upsert", name: "Gamma", model: "anthropic/claude-haiku-4-5", enabled: false });
+		const en = await h.tool.execute("t4", { op: "enable" });
+		expect(en.isError).toBeUndefined();
+		const enBody = parseEnvelope<{ activeCount: number }>(en);
+		expect(enBody.activeCount).toBe(2);
+
+		// One primary turn. syncBacklog=1 makes onPrimaryTurnEnd await both
+		// advisors' review turns (which fire the advise calls).
+		await h.session.prompt("Please review the current work.");
+
+		// Blocker advisories steer in as custom messages and trigger follow-up
+		// turns; poll until both markers are in the primary transcript.
+		const messagesText = () => JSON.stringify(h!.session.agent.state.messages);
+		await waitFor(() => messagesText().includes(MARKER_ALPHA) && messagesText().includes(MARKER_BETA), 20_000);
+		await h.session.waitForIdle();
+		expect(messagesText()).toContain(MARKER_ALPHA);
+		expect(messagesText()).toContain(MARKER_BETA);
+
+		// Both advisors actually streamed through the seam.
+		expect(alphaMock.calls.length).toBeGreaterThanOrEqual(1);
+		expect(betaMock.calls.length).toBeGreaterThanOrEqual(1);
+
+		// Transcripts: <sessionStem>/__advisor.<slug>.jsonl with assistant records.
+		const stem = h.sessionFile!.slice(0, -".jsonl".length);
+		const alphaTranscript = path.join(stem, "__advisor.alpha.jsonl");
+		const betaTranscript = path.join(stem, "__advisor.beta.jsonl");
+		const hasAssistantRecord = (file: string): boolean => {
+			if (!fs.existsSync(file)) return false;
+			return fs
+				.readFileSync(file, "utf8")
+				.split("\n")
+				.filter((line) => line.trim().length > 0)
+				.some((line) => {
+					try {
+						return JSON.stringify(JSON.parse(line)).includes('"role":"assistant"');
+					} catch {
+						return false;
+					}
+				});
+		};
+		// Recorder writes are queued async; poll until flushed.
+		await waitFor(() => hasAssistantRecord(alphaTranscript) && hasAssistantRecord(betaTranscript), 15_000);
+		expect(fs.existsSync(alphaTranscript)).toBe(true);
+		expect(fs.existsSync(betaTranscript)).toBe(true);
+		expect(hasAssistantRecord(alphaTranscript)).toBe(true);
+		expect(hasAssistantRecord(betaTranscript)).toBe(true);
+
+		// The paused advisor never ran → no transcript file.
+		expect(fs.existsSync(path.join(stem, "__advisor.gamma.jsonl"))).toBe(false);
+	}, 60_000);
 });
 
 // =============================================================================
@@ -565,7 +888,7 @@ describe("I9: no session registered → honest error", () => {
 
 		const result = await h.tool.execute("c", { op: "status" });
 		expect(result.isError).toBe(true);
-		expect(result.content[0].text).toContain("live host session");
+		expect(result.content[0].text).toContain("No live main-agent session");
 
 		// Re-register for teardown
 		AgentRegistry.global().register({
