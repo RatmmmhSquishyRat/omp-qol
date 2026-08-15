@@ -1,0 +1,170 @@
+{
+  "startedAt": "2026-08-15T09:09:12.410Z",
+  "configRootMode": "isolated",
+  "isolationCopied": [
+    {
+      "file": "agent.db",
+      "bytes": 11968512
+    },
+    {
+      "file": "agent.db-wal",
+      "bytes": 4161232
+    },
+    {
+      "file": "agent.db-shm",
+      "bytes": 32768
+    },
+    {
+      "file": "models.db",
+      "bytes": 499712
+    },
+    {
+      "file": "models.db-wal",
+      "bytes": 0
+    },
+    {
+      "file": "models.db-shm",
+      "bytes": 32768
+    },
+    {
+      "file": "models.yml",
+      "bytes": 1195
+    },
+    {
+      "file": ".env",
+      "bytes": 368
+    },
+    {
+      "file": "kimi-device-id",
+      "bytes": 33
+    }
+  ],
+  "primaryModel": "zai/glm-4.5-air",
+  "advisorModels": {
+    "alpha": "zai/glm-4.5-air",
+    "beta": "deepseek/deepseek-v4-flash",
+    "gamma": "zai/glm-4.5-air"
+  },
+  "baselineRepaired": false,
+  "repins": [],
+  "crudSteps": [
+    {
+      "step": 1,
+      "op": "status",
+      "ok": true
+    },
+    {
+      "step": 2,
+      "op": "enable",
+      "ok": true
+    },
+    {
+      "step": 3,
+      "op": "upsert",
+      "ok": true
+    },
+    {
+      "step": 4,
+      "op": "list",
+      "ok": true
+    },
+    {
+      "step": 5,
+      "op": "remove",
+      "ok": true
+    },
+    {
+      "step": 6,
+      "op": "status",
+      "ok": true
+    },
+    {
+      "step": 7,
+      "op": "upsert",
+      "ok": true
+    },
+    {
+      "step": 8,
+      "op": "remove",
+      "ok": true
+    },
+    {
+      "step": 9,
+      "op": "disable",
+      "ok": true
+    }
+  ],
+  "liveChecks": [
+    {
+      "label": "T1-T3 roster stored while disabled",
+      "ok": true
+    },
+    {
+      "label": "baseline: Alpha+Beta running distinct models, all counters zero; Gamma paused",
+      "ok": true
+    },
+    {
+      "label": "per-advisor deltas: Alpha & Beta independently Fed+Streamed; Gamma all-zero",
+      "ok": true,
+      "detail": "Alpha {\"user\":5,\"assistant\":3,\"tokensTotal\":11500,\"cost\":0.0016158000000000001} · Beta {\"user\":5,\"assistant\":3,\"tokensTotal\":11595,\"cost\":0.00012806080000000002}"
+    },
+    {
+      "label": "dump shows both advisors' history",
+      "ok": true
+    },
+    {
+      "label": "transcripts: alpha+beta persisted with assistant records; gamma absent",
+      "ok": true
+    }
+  ],
+  "deltas": {
+    "alpha": {
+      "name": "Alpha",
+      "model": "zai/glm-4.5-air",
+      "baseline": {
+        "user": 0,
+        "assistant": 0,
+        "tokensTotal": 0,
+        "cost": 0
+      },
+      "post": {
+        "user": 5,
+        "assistant": 3,
+        "tokensTotal": 11500,
+        "cost": 0.0016158000000000001
+      }
+    },
+    "beta": {
+      "name": "Beta",
+      "model": "deepseek/deepseek-v4-flash",
+      "baseline": {
+        "user": 0,
+        "assistant": 0,
+        "tokensTotal": 0,
+        "cost": 0
+      },
+      "post": {
+        "user": 5,
+        "assistant": 3,
+        "tokensTotal": 11595,
+        "cost": 0.00012806080000000002
+      }
+    }
+  },
+  "gammaSilent": true,
+  "transcripts": {
+    "alpha": true,
+    "beta": true,
+    "gammaAbsent": true
+  },
+  "pingReply": "PING",
+  "sessionFile": "C:\\Users\\15480\\.omp-qol-e2e-20260815-170912\\agent\\sessions\\-Desktop-AIWorkshop-repos-omp-qol-.sandbox-scratch-e2e-advisor-ws-20260815-170912-live\\2026-08-15T09-10-19-606Z_01a004af-b6d6-7000-bc99-51169a4a8b22.jsonl",
+  "timings": {
+    "crudMs": 54742,
+    "liveMs": 64167
+  },
+  "verdict": "pass",
+  "verdictReason": "all CRUD steps green under the new envelope; Alpha and Beta independently Built(running, distinct models) → Fed(user>=1) → Streamed(assistant>=1, tokens>0); paused Gamma silent; transcripts on disk",
+  "productIssues": [],
+  "notes": []
+}

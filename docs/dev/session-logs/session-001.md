@@ -1,7 +1,7 @@
 # Session 001: QOL-004 advisor docs
 
 **date**: 2026-08-15
-**commits**: `dda148b`, `475dfbd`, `49ea863`, `078f686`, `643e513`
+**commits**: `dda148b`, `475dfbd`, `49ea863`, `078f686`, `643e513`, `336d0ab`, `8feb59a`, `91f670b`, `bb88788`（Turn 10–11 rework；phase-3 docs commits 见 Turn 11 末尾）
 
 ## Turn 1
 
@@ -179,5 +179,33 @@
 - 发现仓库根有用户自建的 `WATCHDOG.yml`（6 个监察 advisor），非本 agent 产物，未纳入提交。
 
 **commit**: `643e513`
+
+## Turn 10
+
+### User
+
+（消息以 `/multi-model-review` 命令为前缀）
+
+> 对于上述这部分的功能完整性, 我持怀疑态度, 因为我现在还是没有看到你们的汇报中, 有有关真实使用模型进行测试, 并得到多个advisor均正常运行的这个结果. 因此我判定结果为不合格, 需要重新返回对于代码和功能测试进行完整review-redesign-rework loop. 另一方面, 对于当前插件侧给到agent的各种提示, 指南, 说明, 工具输出和描述等等, 这些看上去好像也没有进行过整体review-refine, 因此也属于隐患点. 完整理解, 全量充分review, 并记录到plan中, 最后再简要汇报.
+
+### Agent Actions
+
+- 并行发起 6 模型对抗评审（Fable 5 Max、Opus 5 High、Grok 4.6 Fast、Gemini 3.7 Flash、GPT 5.6 Sol、Kimi K3）。结论 6/6 一致：用户判定成立且**低估了问题**——缺口是结构性的。
+- 合并评审发现：无一测试证明任何 advisor 真正运行过（`status:"running"` 是构造期记账；L3 从未跑 primary turn；e2e 在 no_model 死 roster 上也能全绿；roster 从未 ≥2）；工具把宿主 `PerAdvisorStat` 的证据字段（tokens/messages/cost/sessionId）全部丢弃，"正常运行"在结构上不可证明；95/95 含假通过（A9 恒真正则、A17 从未调 factory、I2/I3/I5/I6 弱于 gate 标题、I10 not-paused、F8 标 PASS 实为脚本化 CRUD）；数据安全隐患（不可解析 WATCHDOG.yml 被静默清空、mutate 无锁竞态、persisted 失真、全 op 混用 approval:"read"）；文本面确未整体审校；测试共享隔离根并发互删。
+- 写出并获批 rework 计划 `qol-004_rework_loop_3a82b944.plan.md`：A 证据面前置 → B 安全/正确性 + 3 决策点 → C 测试完整性 + 新 I11/I12 → D L6 多 advisor 真实流量验收 → E 文本面整体重写 → F 文档求真与收尾；"advisor 正常运行"定义为 Built→Fed→Streamed 证据阶梯（按 advisor、N≥2）。
+
+## Turn 11
+
+### User
+
+（Build in Parallel：用户将已批准的 rework 计划分派为三个接力的 build 阶段 worker。分派消息是逐阶段任务书（scope/safety/verify/commit 指令），原文未在本 log 复制——阶段 1、2 的任务书原文见 `session-002.md` / `session-003.md`；本 Turn 记录三阶段汇总与最终结果。）
+
+### Agent Actions
+
+- **Phase 1（plan A/B/C/E；详单 session-002）**：证据透传（`LiveAdvisorStat`: tokens/cost/messages/contextTokens/sessionId + `activeCount`）、防清空守卫、宿主 slugify 复用（重复 slug last-wins 对齐）、mutate 按路径串行化、persisted/fileDeleted 求真、按 op 动态 approval 分层 + ADR-005 §D5 修订（追加式）、隐式 default 合成条目、advisor/mode/goal 统一 `{ok, tool, op, …}` 信封、假通过修复（A9/A17/I2/I3/I5/I6/I10）、preload 隔离根 pid 化、新增 I11（双 advisor 并行 upsert，activeCount===2）与 I12（`advisorStreamFn` 脚本流：双 advisor 标记 advise 入 primary、`__advisor.<slug>.jsonl` 落盘、paused 无 transcript）。套件 95 → 118/118（597 断言）。**commits**: `336d0ab`（work）、`8feb59a`（docs 映射）。
+- **Phase 2（plan D；详单 session-003）**：L6 多 advisor 真实流量验收**首跑即 PASS**（run `20260815-164307`，~182 s）：隔离 `PI_CONFIG_DIR` 根（仅凭证/模型注册表播种，401 模型解析，未用 fallback）；CRUD 9/9 过新信封；Alpha `zai/glm-4.5-air` delta assistant 0→6 / tokens 0→28 097 / $0.003796；Beta `deepseek/deepseek-v4-flash` delta assistant 0→3 / tokens 0→11 442 / $0.000623；paused Gamma 全零且无 transcript 文件；工件入库 `.sandbox/e2e-artifacts/run-20260815-164307/`（>1 MB 原始帧日志按体积策略不入库）。**commits**: `91f670b`（work）、`bb88788`（docs 映射）。
+- **Phase 3（plan F；本阶段）**：impl-notes 求真（F-gate 逐行重评——原评级虚高与 rework 补证两个事实并记；F8 拆分"脚本化工具驱动 CRUD"与"真实流量验收"；新增 Rework 章节含探针结论：`tools:[]`=无工具而全未知列表回退默认子集、重复 slug last-wins、按 op 动态 approval；计数 95→118 订正）；README/package.json 补 QOL-004；pillar 原文恢复 + 追加第二条用户澄清（验收判定原文）；session log 归并（本 Turn + session-002/003 顶部指针注）；journal phase-005；test-workspace 锚安全检查（发现见下）；插件重装并核对与源零差异；最终验证：`bun test` 118/118（597 断言）、plugin tsc 零错误（267 个 ref_repos `.md` 导入错误为已知环境噪声）、L6 终树重跑 run `20260815-170912` **PASS**（exit 0 首跑即过，~133 s：CRUD 9/9；Alpha assistant 0→3 / tokens 0→11 500 / $0.001616，Beta assistant 0→3 / tokens 0→11 595 / $0.000128，Gamma 全零无 transcript；工件 `.sandbox/e2e-artifacts/run-20260815-170912/`）。全部积压 commit 推送 origin。
+- **VERBATIM-DRIFT 事故（pillar，透明记录）**：工作树中存在一处未提交的 `docs/ssot/pillars/self-managed-mode-switch/advisor-watchdog.md` 编辑，删掉了 Turn 9 用户原话中的两个"啊"（真原文两处"啊"均在，已对照本会话 Turn 9 记录确认）。该编辑非任何 build 阶段所写、亦未被提交，来源未能定位；phase-2 worker 在提交前检查 git status 时发现并按 pillar-verbatim 规则上报、原样搁置。phase-3 以 `git diff` 核实该文件的全部工作树改动**仅有**这两处删字，无其他合法修改混入，遂 `git restore` 恢复提交版原文，再追加第二条澄清章节。事故按用户规则记录在案，不隐匿。
+- **test-workspace 锚安全发现**：`test-workspace/` 无自己的 `.git` → 宿主 `repo.root()` 上溯到 omp-qol 仓库根，只读探针证实从 test-workspace（含 `demo-mini-app/`）内启动的会话做 project-scope advisor 写操作会命中**生产文件** `C:\...\omp-qol\WATCHDOG.yml`（6 advisor）。这是宿主自身的锚定语义（TUI 同理），非插件缺陷；操作红线已写入 journal：advisor 写操作测试一律用 git-init 的 scratch 工作区（现有 e2e harness 均已如此），不从 test-workspace 发起。未擅自 `git init` test-workspace——是否让其会话看到仓库 6 advisor 属用户域决策，留由作者裁定。
 
 

@@ -1,0 +1,28 @@
+{
+  "label": "live T3 upsert Gamma (paused control)",
+  "prompt": "Call the tool named 'advisor' exactly once with parameters op=upsert name=\"Gamma\" model=\"zai/glm-4.5-air\" enabled=false. Do not call any other tool. Then reply with the single word DONE.",
+  "envelopes": [
+    {
+      "ok": true,
+      "tool": "advisor",
+      "op": "upsert",
+      "persisted": true,
+      "fileDeleted": false,
+      "applied": true,
+      "effectiveAt": "stored",
+      "source": "C:\\Users\\15480\\Desktop\\AIWorkshop\\repos\\omp-qol\\.sandbox\\scratch\\e2e-advisor-ws-20260815-170912-live\\WATCHDOG.yml",
+      "verification": {
+        "enabled": false,
+        "active": false,
+        "activeCount": 0,
+        "advisors": []
+      },
+      "warnings": [
+        "stored: the advisor session flag is OFF, so no runtime starts now (activeCount=0). The file change persisted and the configs are stored; op=enable starts the roster."
+      ]
+    }
+  ],
+  "rawTexts": [
+    "{\n  \"ok\": true,\n  \"tool\": \"advisor\",\n  \"op\": \"upsert\",\n  \"persisted\": true,\n  \"fileDeleted\": false,\n  \"applied\": true,\n  \"effectiveAt\": \"stored\",\n  \"source\": \"C:\\\\Users\\\\15480\\\\Desktop\\\\AIWorkshop\\\\repos\\\\omp-qol\\\\.sandbox\\\\scratch\\\\e2e-advisor-ws-20260815-170912-live\\\\WATCHDOG.yml\",\n  \"verification\": {\n    \"enabled\": false,\n    \"active\": false,\n    \"activeCount\": 0,\n    \"advisors\": []\n  },\n  \"warnings\": [\n    \"stored: the advisor session flag is OFF, so no runtime starts now (activeCount=0). The file change persisted and the configs are stored; op=enable starts the roster.\"\n  ]\n}"
+  ]
+}

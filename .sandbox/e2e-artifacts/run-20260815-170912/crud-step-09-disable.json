@@ -1,0 +1,19 @@
+{
+  "label": "crud step 9 (disable)",
+  "prompt": "Call the tool named 'advisor' exactly once with parameters op=disable. Do not call any other tool. Then reply with the single word DONE.",
+  "envelopes": [
+    {
+      "ok": true,
+      "tool": "advisor",
+      "op": "disable",
+      "enabled": false,
+      "active": false,
+      "running": false,
+      "discovered": false,
+      "warnings": []
+    }
+  ],
+  "rawTexts": [
+    "advisor session flag OFF — all advisor runtimes stopped\n{\n  \"ok\": true,\n  \"tool\": \"advisor\",\n  \"op\": \"disable\",\n  \"enabled\": false,\n  \"active\": false,\n  \"running\": false,\n  \"discovered\": false,\n  \"warnings\": []\n}"
+  ]
+}

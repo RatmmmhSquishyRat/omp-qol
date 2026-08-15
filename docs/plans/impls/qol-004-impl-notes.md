@@ -15,10 +15,67 @@
 | `plugin/src/lib/settings.ts` | Added `advisorToolEnabled` (default true) | Modified |
 | `plugin/package.json` | Added `advisorToolEnabled` setting schema; updated test script | Modified |
 | `plugin/src/main.ts` | Registered advisor tool; updated session_start log + qol-config command | Modified |
-| `plugin/test/advisor-tool.test.ts` | New: L1 mock tests (28 cases, A1–A18) | Created |
-| `plugin/test/advisor-integration.test.ts` | New: L3 real-session tests (10 cases, I1–I9 + bridge reach) | Created |
+| `plugin/test/advisor-tool.test.ts` | New: L1 mock tests (at creation: 28 cases, A1–A18 · after 2026-08-15 rework: 55 cases, A1–A25) | Created |
+| `plugin/test/advisor-integration.test.ts` | New: L3 real-session tests (at creation: 10 cases, I1–I9 + bridge reach · after 2026-08-15 rework: 14 cases, I1–I12 + bridge reach) | Created |
 | `.sandbox/verify-workspace.ts` | Updated L4 to recognize `advisor` tool + 10-op schema check | Modified |
-| `.sandbox/e2e-workspace-advisor.ts` | L6 delivery-form e2e: installed omp + real LLM, 6 ops | Created |
+| `.sandbox/e2e-workspace-advisor.ts` | L6 delivery-form e2e: installed omp + real LLM, 6 ops (rework 2026-08-15: rewritten as CRUD + LIVE multi-advisor real-traffic acceptance) | Created |
+
+---
+
+## Rework (2026-08-15)
+
+A 6-model adversarial review (Fable 5 Max / Opus 5 / Grok 4.6 / Gemini 3.7 /
+GPT 5.6 Sol / Kimi K3; consolidated in `qol-004_rework_loop_3a82b944.plan.md`)
+upheld the user's 不合格 verdict and found this file's own self-grades
+inflated. What the review found:
+
+- **No test proved any advisor actually RAN.** `status: "running"` is
+  construction-time bookkeeping in the host, not traffic evidence; the L6
+  runs below were scripted tool-driven CRUD (a real LLM drives the TOOL, but
+  no advisor ever streamed); the roster never reached ≥2 live advisors.
+- **The tool discarded the host's evidence fields**: `PerAdvisorStat`
+  carries tokens/messages/cost/sessionId, but status/verification only
+  passed name/status/model through — "正常运行" was structurally unprovable.
+- **Fake passes in the suite** (95/95 was not what it claimed): A9's regex
+  had a tautological empty branch; A17 never called the factory; I2/I3/I5/I6
+  asserted less than their gate titles; I10 accepted not-paused instead of
+  exactly-running.
+- **Data-safety holes**: native load silently maps unparsable WATCHDOG.yml
+  to an empty doc and an empty save DELETES the file (silent clobber path);
+  no mutate serialization (lost updates); untruthful `persisted`/
+  `fileDeleted`; blanket `approval: "read"` on ops that write files and
+  start billable runtimes.
+- **Agent-facing text never holistically reviewed**: IMPLICIT_DEFAULT_NOTE
+  taught a call the tool normalizes away, "saved with an empty roster"
+  actually meant file deletion, three tools spoke three envelope dialects.
+
+What changed (commit `336d0ab` product/tests/text, `91f670b` L6 harness +
+evidence, plus the docs pass you are reading): evidence pass-through
+(LiveAdvisorStat incl. tokens/cost/messages/contextTokens/sessionId,
+`activeCount`), anti-clobber guard, host slugify reuse, per-path mutate
+serialization, truthful `persisted`/`fileDeleted`, per-op approval tiering
+(ADR-005 §D5 amended, original preserved), synthetic implicit-default entry,
+unified `{ok, tool, op, …}` envelope across advisor/mode/goal, all listed
+fake-passes repaired, pid-scoped test isolation roots, NEW I11 (two live
+advisors via parallel tool upserts, `activeCount === 2`) + I12
+(`advisorStreamFn` scripted streaming with on-disk `__advisor.<slug>.jsonl`
+transcripts, paused advisor silent), and the L6 multi-advisor real-traffic
+acceptance (§below). Suite grew 95 → 118 tests.
+
+Probe outcomes locked into behavior and text (reviewers had disagreed):
+
+- `tools: []` **persists and means "no tools"** (advisor keeps only
+  `advise`); a list of ONLY unknown names collapses to `undefined` at
+  discovery → the DEFAULT read/grep/glob subset. The file always keeps the
+  written names verbatim; dropping happens at discovery.
+- Duplicate same-slug entries in one file: host discovery is **last-wins**;
+  the tool aligns (get returns / upsert edits the LAST match; remove deletes
+  ALL matching entries and reports the count) and warns on duplicates.
+- Host `ToolApproval` accepts a per-call function → **per-op dynamic
+  approval is first-class**: list/get/status/dump = `"read"`,
+  upsert/remove/set_shared/apply/enable/disable = `"write"`.
+
+Full handoff detail: `.sandbox/rework-notes.md`.
 
 ---
 
@@ -109,10 +166,17 @@ CLI-parity map for the default advisor (all proven at L3 I10 + L6):
 
 | Level | File | Pass | Fail |
 |---|---|---|---|
-| L1 | `advisor-tool.test.ts` (A1–A19) | 34 | 0 |
-| L3 | `advisor-integration.test.ts` (I1–I10) | 12 | 0 |
+| L1 | `advisor-tool.test.ts` (A1–A25) | 55 | 0 |
+| L3 | `advisor-integration.test.ts` (I1–I12 + bridge) | 14 | 0 |
 | Regression | `goal-tool` 12 + `mode-tool` 22 + `host-bridge` 8 + `integration-real-session` 7 | 49 | 0 |
-| **Total** | single-process `bun test` | **95** | **0** |
+| **Total** | single-process `bun test` | **118** | **0** |
+
+> Count history (kept explicit, not silently rewritten): at the original
+> milestone this table read 95/95 (34 L1 A1–A19 + 12 L3 I1–I10 + 49
+> regression). The 2026-08-15 rework (commit `336d0ab`) repaired the fake
+> passes listed in §Rework and added A20–A25 / I11–I12; the suite is now
+> **118 pass / 0 fail, 597 expect() calls across 6 files** — re-verified by
+> a fresh single-process `bun test` run during the 2026-08-15 docs pass.
 
 > Correction (2026-08-15 review): an earlier version of this table claimed
 > "47 regression / 85 total" — that arithmetic was wrong. `host-bridge` H1 was
@@ -133,21 +197,42 @@ CLI-parity map for the default advisor (all proven at L3 I10 + L6):
 > that freezes `PI_CONFIG_DIR=.omp-qol-test-root` before any import; the
 > kill-switch tests write their lockfile into that root; the test script is
 > now a plain `bun test`. Verified green both single-process and per-file.
+> (Rework 2026-08-15: the preload root is now **pid-scoped**
+> `~/.omp-qol-test-root-<pid>` with a stale-root sweep at preload —
+> concurrent `bun test` processes previously shared one root and could
+> delete each other's state, a 6/6-reviewer finding.)
 
-### Foundation gate coverage (F1–F7)
+### Foundation gate coverage (F1–F8)
+
+> **Re-grade (2026-08-15 rework), both facts on record**: the original
+> version of this table graded F2/F3/F5/F6 as PASS on assertions weaker than
+> their gate titles (I2/I3/I5/I6 did not actually check live-apply effects,
+> runtime replacement, enable-starts-latest, or the unknown-tool semantics —
+> "部分验证" at best; the grades were inflated). The 6-model review called
+> this out; commit `336d0ab` strengthened those cases and added I11/I12, and
+> run `20260815-164307` added real-traffic acceptance. The grades below are
+> the CURRENT, evidence-backed state with the history explicit per row.
 
 | # | Gate | Cases | Status |
 |---|---|---|---|
 | F1 | Parse/list user/project/effective | A5, I1 | PASS |
-| F2 | Upsert while enabled; no restart | I2 | PASS |
-| F3 | Change model/instructions; old runtime replaced | I3 | PASS |
+| F2 | Upsert while enabled; live apply without session restart | I2 (strengthened: `isAdvisorActive`, stats containment, exact `"running"`, envelope verification) + I11 + L6 | PASS — original grade inflated (weak I2); re-proven 2026-08-15 |
+| F3 | Change model/instructions; old runtime replaced | I3 (strengthened: real haiku→sonnet runtime replacement, exactly one stats entry, file has one entry) | PASS — original grade inflated (weak I3); re-proven 2026-08-15 |
 | F4 | Remove project entry; user resurfaces | I4 | PASS |
-| F5 | Mutate while disabled; file persists; enable starts latest | A14, I5 | PASS |
-| F6 | Unknown tool; existing roster untouched | A8, I6 | PASS |
+| F5 | Mutate while disabled; file persists; enable starts latest | A14, I5 (strengthened: `effectiveAt:"stored"`, `activeCount:0` while disabled → enable → exact `"running"` + enable-envelope roster) | PASS — original grade inflated (weak I5); re-proven 2026-08-15 |
+| F6 | Unknown tool; existing roster untouched | A8, A22, I6 (strengthened: probed all-unknown→default-subset fallback warning, verbatim persistence, both live advisors stay `"running"`) | PASS — original grade inflated (weak I6); re-proven 2026-08-15 |
 | F7 | File survives new session | I7 | PASS |
-| F8 | Real LLM e2e (optional) | `.sandbox/e2e-workspace-advisor.ts` | **PASS 2026-08-15** |
+| F8 | Real-LLM use-through (optional) | (a) scripted tool-driven CRUD runs (§below — relabeled; a real LLM drives the TOOL, but no advisor runtime evidence) · (b) **L6 multi-advisor real-traffic acceptance, run `20260815-164307`** (§below — the genuine use-through) | PASS 2026-08-15 — (b) carries the grade |
 
-### L6 delivery-form use-through (2026-08-15)
+### L6 delivery-form use-through (2026-08-15) — scripted tool-driven CRUD
+
+> Relabel (2026-08-15 rework): this run and the two below were originally
+> presented as THE real-LLM e2e. Honest label: **scripted tool-driven
+> CRUD** — a real LLM calls the advisor TOOL step by step, which proves the
+> delivery form and the op surface, but produces NO evidence that any
+> advisor runtime ran (no tokens, no advisor messages, roster never ≥2).
+> The genuine use-through is the multi-advisor real-traffic acceptance
+> further below.
 
 This is the path that was missing from the first impl report. It is **not** L1/L3.
 
@@ -196,13 +281,14 @@ Harness fixes made during review (all in the strict direction):
 - old scratch dirs are cleaned up best-effort; processes not spawned by
   the script are never touched.
 
-Honest scope statement: L6 drives 6 of 10 ops through a real LLM
-(`status`, `enable`, `upsert`, `list`, `remove`, `disable`). The other
-four (`get`, `set_shared`, `apply`, `dump`) are covered at L1+L3 only —
-consistent with the TDD, which gates this milestone on L1+L3+L4 and marks
-L6 as optional (Foundation F8).
+Honest scope statement: this run drove 6 of 10 ops through a real LLM
+(`status`, `enable`, `upsert`, `list`, `remove`, `disable`). (Rework
+2026-08-15: the multi-advisor acceptance run below also drives `dump`,
+bringing real-LLM coverage to 7 of 10; `get`, `set_shared`, `apply` remain
+covered at L1+L3 only — consistent with the TDD, which gates this milestone
+on L1+L3+L4 and marks L6 as optional/Foundation F8.)
 
-### L6 rerun with implicit-default lifecycle (2026-08-15, 9 steps)
+### L6 rerun with implicit-default lifecycle (2026-08-15, 9 steps) — scripted tool-driven CRUD
 
 After Decision 8's changes, the e2e sequence was extended to prove the
 pillar clarification end-to-end on `zai/glm-4.5-flash` (fresh scratch
@@ -221,6 +307,44 @@ ApplyResult JSON back as its chat reply. Harness fixes (assertions
 untouched): the reply instruction now asks for a one-word `DONE` (the
 assertions run on `tool_execution_end` frames, never on the reply), and
 the global timeout is 720s for 9 steps. Rerun passed 9/9.
+
+### L6 multi-advisor real-traffic acceptance (2026-08-15, run `20260815-164307`) — the genuine use-through
+
+The user's acceptance bar (recorded verbatim in the pillar): 真实模型 +
+多个 advisor 均正常运行, graded per the Built→Fed→Streamed evidence ladder.
+The scripted CRUD runs above cannot satisfy it; this run does (rework plan
+phase D, commit `91f670b`). **Verdict: PASS** (first full run, exit 0,
+~182 s).
+
+- Harness: `.sandbox/e2e-workspace-advisor.ts`, rewritten into CRUD + LIVE
+  sections, each with its own spawned installed-omp process and throwaway
+  git workspace.
+- **Isolated config root** (`PI_CONFIG_DIR` → scratch): ONLY
+  credential/model-registry material copied from `~/.omp/agent`; user
+  config/WATCHDOG/sessions never copied (`isolation-manifest.json`); 401
+  models resolved inside the isolated root, NO fallback taken;
+  `modelRoles.advisor` pinned to an unresolvable selector so the host's
+  implicit default could not leak expensive traffic in.
+- CRUD lifecycle **9/9** green under the unified `{ok, tool, op, …}`
+  envelope; every mutate's `source` asserted INSIDE the scratch workspace
+  (production repo-root `WATCHDOG.yml` untouched, mtime predates the run).
+- Advisors created via the TOOL only: Alpha `zai/glm-4.5-air`, Beta
+  `deepseek/deepseek-v4-flash` (distinct providers), Gamma paused control
+  (`enabled: false`). Primary model `zai/glm-4.5-air`, one real PING turn.
+- **Per-advisor deltas** (baseline asserted all-zero first):
+  - Alpha: assistant 0→6, tokens 0→28 097, cost $0.003796 — Built ✓ Fed ✓ Streamed ✓
+  - Beta: assistant 0→3, tokens 0→11 442, cost $0.000623 — Built ✓ Fed ✓ Streamed ✓
+  - Gamma (paused): all-zero throughout, NO transcript file — negative control ✓
+- On-disk `__advisor.alpha.jsonl` + `__advisor.beta.jsonl` transcripts with
+  assistant records; `op=dump` history names both advisors.
+- Post-hoc reviewable artifacts:
+  `.sandbox/e2e-artifacts/run-20260815-164307/` — `EVIDENCE.md` index,
+  per-step envelopes, baseline/post `op=status` JSONs, transcripts, final
+  scratch WATCHDOG.yml, `verdict.json` (the two >1 MB raw frame logs stay
+  working-tree only by size policy).
+- Final-tree confirmation: the harness was rerun once more during the
+  2026-08-15 docs pass (Phase 3) on the finished tree — see the run
+  artifacts dir recorded in the phase-005 journal entry.
 
 ---
 

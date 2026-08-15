@@ -1,0 +1,1606 @@
+[
+  {
+    "provider": "cursor",
+    "id": "claude-4-sonnet"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-4.5-opus-high"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-4.5-sonnet"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-4.6-opus-high"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-4.6-opus-max"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-4.6-sonnet-medium"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-fable-5-high"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-fable-5-low"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-fable-5-max"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-fable-5-medium"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-fable-5-xhigh"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-4-7-high"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-4-7-high-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-4-7-low"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-4-7-low-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-4-7-max"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-4-7-max-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-4-7-medium"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-4-7-medium-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-4-7-xhigh"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-4-7-xhigh-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-4-8-high"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-4-8-high-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-4-8-low"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-4-8-low-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-4-8-max"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-4-8-max-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-4-8-medium"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-4-8-medium-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-4-8-xhigh"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-4-8-xhigh-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-5-high"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-5-high-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-5-low"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-5-low-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-5-medium"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-5-medium-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-5-thinking-max"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-5-thinking-max-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-5-thinking-xhigh"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-opus-5-thinking-xhigh-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-sonnet-5-high"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-sonnet-5-low"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-sonnet-5-max"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-sonnet-5-medium"
+  },
+  {
+    "provider": "cursor",
+    "id": "claude-sonnet-5-xhigh"
+  },
+  {
+    "provider": "cursor",
+    "id": "composer-1"
+  },
+  {
+    "provider": "cursor",
+    "id": "composer-1.5"
+  },
+  {
+    "provider": "cursor",
+    "id": "composer-2.5"
+  },
+  {
+    "provider": "cursor",
+    "id": "composer-2.5-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "cursor-grok-4.5-high"
+  },
+  {
+    "provider": "cursor",
+    "id": "cursor-grok-4.5-high-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "cursor-grok-4.5-low"
+  },
+  {
+    "provider": "cursor",
+    "id": "cursor-grok-4.5-low-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "cursor-grok-4.5-medium"
+  },
+  {
+    "provider": "cursor",
+    "id": "cursor-grok-4.5-medium-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "cursor-grok-4.6-high"
+  },
+  {
+    "provider": "cursor",
+    "id": "cursor-grok-4.6-high-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "cursor-grok-4.6-low"
+  },
+  {
+    "provider": "cursor",
+    "id": "cursor-grok-4.6-low-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "cursor-grok-4.6-medium"
+  },
+  {
+    "provider": "cursor",
+    "id": "cursor-grok-4.6-medium-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "cursor-grok-4.6-xhigh"
+  },
+  {
+    "provider": "cursor",
+    "id": "cursor-grok-4.6-xhigh-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "default"
+  },
+  {
+    "provider": "cursor",
+    "id": "gemini-3-flash"
+  },
+  {
+    "provider": "cursor",
+    "id": "gemini-3-pro"
+  },
+  {
+    "provider": "cursor",
+    "id": "gemini-3.1-pro"
+  },
+  {
+    "provider": "cursor",
+    "id": "gemini-3.5-flash"
+  },
+  {
+    "provider": "cursor",
+    "id": "gemini-3.6-flash-high"
+  },
+  {
+    "provider": "cursor",
+    "id": "gemini-3.6-flash-low"
+  },
+  {
+    "provider": "cursor",
+    "id": "gemini-3.6-flash-medium"
+  },
+  {
+    "provider": "cursor",
+    "id": "gemini-3.6-flash-minimal"
+  },
+  {
+    "provider": "cursor",
+    "id": "gemini-3.7-flash-high"
+  },
+  {
+    "provider": "cursor",
+    "id": "gemini-3.7-flash-low"
+  },
+  {
+    "provider": "cursor",
+    "id": "gemini-3.7-flash-medium"
+  },
+  {
+    "provider": "cursor",
+    "id": "glm-5.2-high"
+  },
+  {
+    "provider": "cursor",
+    "id": "glm-5.2-max"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5-mini"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.1"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.1-codex-max"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.1-codex-max-high"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.1-codex-mini"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.1-high"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.1-low"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.2"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.2-codex"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.2-codex-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.2-codex-high"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.2-codex-high-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.2-codex-low"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.2-codex-low-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.2-codex-xhigh"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.2-codex-xhigh-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.2-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.2-high"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.2-high-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.2-low"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.2-low-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.2-xhigh"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.2-xhigh-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.3-codex"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.3-codex-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.3-codex-high"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.3-codex-high-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.3-codex-low"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.3-codex-low-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.3-codex-spark-preview"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.3-codex-xhigh"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.3-codex-xhigh-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.4-high"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.4-high-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.4-low"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.4-medium"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.4-medium-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.4-mini-high"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.4-mini-low"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.4-mini-medium"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.4-mini-none"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.4-mini-xhigh"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.4-nano-high"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.4-nano-low"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.4-nano-medium"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.4-nano-none"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.4-nano-xhigh"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.4-xhigh"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.4-xhigh-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.5-extra-high"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.5-extra-high-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.5-high"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.5-high-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.5-low"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.5-low-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.5-medium"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.5-medium-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.5-none"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.5-none-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-luna-high"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-luna-high-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-luna-low"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-luna-low-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-luna-max"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-luna-max-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-luna-medium"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-luna-medium-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-luna-none"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-luna-none-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-luna-xhigh"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-luna-xhigh-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-sol-high"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-sol-high-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-sol-low"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-sol-low-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-sol-max"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-sol-max-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-sol-medium"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-sol-medium-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-sol-none"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-sol-none-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-sol-xhigh"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-sol-xhigh-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-terra-high"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-terra-high-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-terra-low"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-terra-low-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-terra-max"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-terra-max-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-terra-medium"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-terra-medium-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-terra-none"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-terra-none-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-terra-xhigh"
+  },
+  {
+    "provider": "cursor",
+    "id": "gpt-5.6-terra-xhigh-fast"
+  },
+  {
+    "provider": "cursor",
+    "id": "grok-code-fast-1"
+  },
+  {
+    "provider": "cursor",
+    "id": "kimi-k2.5"
+  },
+  {
+    "provider": "cursor",
+    "id": "kimi-k2.7-code"
+  },
+  {
+    "provider": "cursor",
+    "id": "kimi-k3-high"
+  },
+  {
+    "provider": "cursor",
+    "id": "kimi-k3-low"
+  },
+  {
+    "provider": "cursor",
+    "id": "kimi-k3-max"
+  },
+  {
+    "provider": "deepseek",
+    "id": "deepseek-v4-flash"
+  },
+  {
+    "provider": "deepseek",
+    "id": "deepseek-v4-pro"
+  },
+  {
+    "provider": "kimi-code",
+    "id": "k3"
+  },
+  {
+    "provider": "kimi-code",
+    "id": "k3-256k"
+  },
+  {
+    "provider": "kimi-code",
+    "id": "kimi-for-coding"
+  },
+  {
+    "provider": "kimi-code",
+    "id": "kimi-for-coding-highspeed"
+  },
+  {
+    "provider": "kimi-code",
+    "id": "kimi-k2"
+  },
+  {
+    "provider": "kimi-code",
+    "id": "kimi-k2-turbo-preview"
+  },
+  {
+    "provider": "kimi-code",
+    "id": "kimi-k2.5"
+  },
+  {
+    "provider": "xai-oauth",
+    "id": "grok-4.20-0309-non-reasoning"
+  },
+  {
+    "provider": "xai-oauth",
+    "id": "grok-4.20-0309-reasoning"
+  },
+  {
+    "provider": "xai-oauth",
+    "id": "grok-4.20-multi-agent-0309"
+  },
+  {
+    "provider": "xai-oauth",
+    "id": "grok-4.3"
+  },
+  {
+    "provider": "xai-oauth",
+    "id": "grok-4.5"
+  },
+  {
+    "provider": "xai-oauth",
+    "id": "grok-4.6"
+  },
+  {
+    "provider": "xai-oauth",
+    "id": "grok-build"
+  },
+  {
+    "provider": "xai-oauth",
+    "id": "grok-build-0.1"
+  },
+  {
+    "provider": "xai-oauth",
+    "id": "grok-composer-2.5-fast"
+  },
+  {
+    "provider": "zai",
+    "id": "glm-4.5"
+  },
+  {
+    "provider": "zai",
+    "id": "glm-4.5-air"
+  },
+  {
+    "provider": "zai",
+    "id": "glm-4.5-flash"
+  },
+  {
+    "provider": "zai",
+    "id": "glm-4.5v"
+  },
+  {
+    "provider": "zai",
+    "id": "glm-4.6"
+  },
+  {
+    "provider": "zai",
+    "id": "glm-4.6v"
+  },
+  {
+    "provider": "zai",
+    "id": "glm-4.7"
+  },
+  {
+    "provider": "zai",
+    "id": "glm-4.7-flash"
+  },
+  {
+    "provider": "zai",
+    "id": "glm-4.7-flashx"
+  },
+  {
+    "provider": "zai",
+    "id": "glm-5"
+  },
+  {
+    "provider": "zai",
+    "id": "glm-5-turbo"
+  },
+  {
+    "provider": "zai",
+    "id": "glm-5.1"
+  },
+  {
+    "provider": "zai",
+    "id": "glm-5.2"
+  },
+  {
+    "provider": "zai",
+    "id": "glm-5v-turbo"
+  },
+  {
+    "provider": "scnet",
+    "id": "DeepSeek-V4-Flash-0731"
+  },
+  {
+    "provider": "scnet",
+    "id": "GLM-5.2-Base"
+  },
+  {
+    "provider": "scnet",
+    "id": "MiniMax-M2.5"
+  },
+  {
+    "provider": "scnet",
+    "id": "Qwen3.5-122B-A10B"
+  },
+  {
+    "provider": "scnet",
+    "id": "Qwen3.8-Max"
+  },
+  {
+    "provider": "scnet",
+    "id": "Qwen3-30B-A3B-Instruct-2507"
+  },
+  {
+    "provider": "scnet",
+    "id": "Qwen3-235B-A22B"
+  },
+  {
+    "provider": "scnet",
+    "id": "Kimi-K2.6"
+  },
+  {
+    "provider": "scnet",
+    "id": "MiniMax-M3"
+  },
+  {
+    "provider": "scnet",
+    "id": "DeepSeek-R1-Distill-Qwen-7B"
+  },
+  {
+    "provider": "scnet",
+    "id": "DeepSeek-R1-Distill-Qwen-32B"
+  },
+  {
+    "provider": "scnet",
+    "id": "DeepSeek-R1-Distill-Llama-70B"
+  },
+  {
+    "provider": "scnet",
+    "id": "DeepSeek-V4-Pro"
+  },
+  {
+    "provider": "scnet",
+    "id": "Kimi-K2.7-Base"
+  },
+  {
+    "provider": "scnet",
+    "id": "SCNet-Max"
+  },
+  {
+    "provider": "scnet",
+    "id": "Qwen3.6-Max"
+  },
+  {
+    "provider": "scnet",
+    "id": "Kimi-K2.5"
+  },
+  {
+    "provider": "scnet",
+    "id": "Qwen3.7-Plus"
+  },
+  {
+    "provider": "scnet",
+    "id": "Kimi-K3"
+  },
+  {
+    "provider": "scnet",
+    "id": "GLM-5.2"
+  },
+  {
+    "provider": "scnet",
+    "id": "Kimi-K2.7-Code"
+  },
+  {
+    "provider": "scnet",
+    "id": "GLM-5"
+  },
+  {
+    "provider": "scnet",
+    "id": "Qwen3-30B-A3B"
+  },
+  {
+    "provider": "scnet",
+    "id": "QwQ-32B"
+  },
+  {
+    "provider": "scnet",
+    "id": "Qwen3-235B-A22B-Thinking-2507"
+  },
+  {
+    "provider": "scnet",
+    "id": "MiMo-V2.5-Pro"
+  },
+  {
+    "provider": "scnet",
+    "id": "MiniMax-M2.7"
+  },
+  {
+    "provider": "scnet",
+    "id": "GLM-5.1"
+  },
+  {
+    "provider": "scnet",
+    "id": "Qwen3.6-Flash"
+  },
+  {
+    "provider": "scnet",
+    "id": "GLM-5-Base"
+  },
+  {
+    "provider": "scnet",
+    "id": "Qwen3.6-27B"
+  },
+  {
+    "provider": "scnet",
+    "id": "Qwen3-Embedding-8B"
+  },
+  {
+    "provider": "scnet",
+    "id": "Qwen3.6-Plus"
+  },
+  {
+    "provider": "scnet",
+    "id": "Qwen3.7-Max"
+  },
+  {
+    "provider": "scnet",
+    "id": "GLM-5.1-Base"
+  },
+  {
+    "provider": "scnet",
+    "id": "DeepSeek-V4-Flash"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-5.1"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-5.2"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-5.4"
+  },
+  {
+    "provider": "aiberm",
+    "id": "openai/gpt-5.1"
+  },
+  {
+    "provider": "aiberm",
+    "id": "anthropic/claude-fable-5"
+  },
+  {
+    "provider": "aiberm",
+    "id": "anthropic/claude-haiku-4.5"
+  },
+  {
+    "provider": "aiberm",
+    "id": "anthropic/claude-haiku-4.5:thinking"
+  },
+  {
+    "provider": "aiberm",
+    "id": "anthropic/claude-opus"
+  },
+  {
+    "provider": "aiberm",
+    "id": "anthropic/claude-opus-4.5"
+  },
+  {
+    "provider": "aiberm",
+    "id": "anthropic/claude-opus-4.5:thinking"
+  },
+  {
+    "provider": "aiberm",
+    "id": "anthropic/claude-opus-4.6"
+  },
+  {
+    "provider": "aiberm",
+    "id": "anthropic/claude-opus-4.6:thinking"
+  },
+  {
+    "provider": "aiberm",
+    "id": "anthropic/claude-opus-4.7"
+  },
+  {
+    "provider": "aiberm",
+    "id": "anthropic/claude-opus-4.8"
+  },
+  {
+    "provider": "aiberm",
+    "id": "anthropic/claude-opus-5"
+  },
+  {
+    "provider": "aiberm",
+    "id": "anthropic/claude-sonnet"
+  },
+  {
+    "provider": "aiberm",
+    "id": "anthropic/claude-sonnet-4.5"
+  },
+  {
+    "provider": "aiberm",
+    "id": "anthropic/claude-sonnet-4.5:thinking"
+  },
+  {
+    "provider": "aiberm",
+    "id": "anthropic/claude-sonnet-4.6"
+  },
+  {
+    "provider": "aiberm",
+    "id": "anthropic/claude-sonnet-4.6:thinking"
+  },
+  {
+    "provider": "aiberm",
+    "id": "anthropic/claude-sonnet-5"
+  },
+  {
+    "provider": "aiberm",
+    "id": "claude-fable-5"
+  },
+  {
+    "provider": "aiberm",
+    "id": "claude-haiku-4-5"
+  },
+  {
+    "provider": "aiberm",
+    "id": "claude-haiku-4-5-20251001"
+  },
+  {
+    "provider": "aiberm",
+    "id": "claude-opus-4-5-20251101"
+  },
+  {
+    "provider": "aiberm",
+    "id": "claude-opus-4-6"
+  },
+  {
+    "provider": "aiberm",
+    "id": "claude-opus-4-7"
+  },
+  {
+    "provider": "aiberm",
+    "id": "claude-opus-4-8"
+  },
+  {
+    "provider": "aiberm",
+    "id": "claude-opus-5"
+  },
+  {
+    "provider": "aiberm",
+    "id": "claude-opus-test"
+  },
+  {
+    "provider": "aiberm",
+    "id": "claude-sonnet-4-5-20250929"
+  },
+  {
+    "provider": "aiberm",
+    "id": "claude-sonnet-4-6"
+  },
+  {
+    "provider": "aiberm",
+    "id": "claude-sonnet-5"
+  },
+  {
+    "provider": "aiberm",
+    "id": "deepseek-ocr"
+  },
+  {
+    "provider": "aiberm",
+    "id": "deepseek-r1-0528"
+  },
+  {
+    "provider": "aiberm",
+    "id": "deepseek-v3.2"
+  },
+  {
+    "provider": "aiberm",
+    "id": "deepseek-v3.2-exp"
+  },
+  {
+    "provider": "aiberm",
+    "id": "deepseek-v4-flash"
+  },
+  {
+    "provider": "aiberm",
+    "id": "deepseek-v4-pro"
+  },
+  {
+    "provider": "aiberm",
+    "id": "deepseek/deepseek-r1"
+  },
+  {
+    "provider": "aiberm",
+    "id": "deepseek/deepseek-r1-0528"
+  },
+  {
+    "provider": "aiberm",
+    "id": "deepseek/deepseek-v3.2"
+  },
+  {
+    "provider": "aiberm",
+    "id": "deepseek/deepseek-v3.2-exp"
+  },
+  {
+    "provider": "aiberm",
+    "id": "deepseek/deepseek-v4-flash"
+  },
+  {
+    "provider": "aiberm",
+    "id": "deepseek/deepseek-v4-pro"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gemini-2.5-flash"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gemini-2.5-flash-image"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gemini-2.5-pro"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gemini-3-flash-preview"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gemini-3-pro-image-preview"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gemini-3-pro-preview"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gemini-3.1-flash-image-preview"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gemini-3.1-flash-lite"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gemini-3.1-flash-lite-preview"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gemini-3.1-flash-tts-preview"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gemini-3.1-pro-preview"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gemini-3.5-flash"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gemini-3.6-flash"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gemini-3.7-flash"
+  },
+  {
+    "provider": "aiberm",
+    "id": "glm-4.6"
+  },
+  {
+    "provider": "aiberm",
+    "id": "glm-5"
+  },
+  {
+    "provider": "aiberm",
+    "id": "glm-5-turbo"
+  },
+  {
+    "provider": "aiberm",
+    "id": "glm-5.1"
+  },
+  {
+    "provider": "aiberm",
+    "id": "glm-5.2"
+  },
+  {
+    "provider": "aiberm",
+    "id": "google/gemini-2.5-flash"
+  },
+  {
+    "provider": "aiberm",
+    "id": "google/gemini-2.5-pro"
+  },
+  {
+    "provider": "aiberm",
+    "id": "google/gemini-3-flash"
+  },
+  {
+    "provider": "aiberm",
+    "id": "google/gemini-3-pro"
+  },
+  {
+    "provider": "aiberm",
+    "id": "google/gemini-3-pro-mcpmark"
+  },
+  {
+    "provider": "aiberm",
+    "id": "google/gemini-3.1-flash-lite"
+  },
+  {
+    "provider": "aiberm",
+    "id": "google/gemini-3.1-pro"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-4.1"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-4.1-mini"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-4.1-nano"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-4o"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-4o-mini"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-5"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-5-mini"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-5-nano"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-5.1-codex"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-5.1-codex-max"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-5.2-chat-latest"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-5.2-codex"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-5.3-codex"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-5.3-codex-spark"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-5.3-codex-xhigh"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-5.4-mini"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-5.4-xhigh"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-5.5"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-5.5-openai-compact"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-5.5-xhigh"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-5.6"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-5.6-luna"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-5.6-sol"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-5.6-terra"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-image-1.5"
+  },
+  {
+    "provider": "aiberm",
+    "id": "gpt-image-2"
+  },
+  {
+    "provider": "aiberm",
+    "id": "grok-4.3"
+  },
+  {
+    "provider": "aiberm",
+    "id": "grok-4.5"
+  },
+  {
+    "provider": "aiberm",
+    "id": "grok-4.6"
+  },
+  {
+    "provider": "aiberm",
+    "id": "kimi-k2.5"
+  },
+  {
+    "provider": "aiberm",
+    "id": "kimi-k2.6"
+  },
+  {
+    "provider": "aiberm",
+    "id": "kimi-k2.7-code"
+  },
+  {
+    "provider": "aiberm",
+    "id": "kimi-k3"
+  },
+  {
+    "provider": "aiberm",
+    "id": "mimo-v2-flash"
+  },
+  {
+    "provider": "aiberm",
+    "id": "mimo-v2-omni"
+  },
+  {
+    "provider": "aiberm",
+    "id": "mimo-v2-pro"
+  },
+  {
+    "provider": "aiberm",
+    "id": "mimo-v2.5"
+  },
+  {
+    "provider": "aiberm",
+    "id": "mimo-v2.5-pro"
+  },
+  {
+    "provider": "aiberm",
+    "id": "minimax-m2.1"
+  },
+  {
+    "provider": "aiberm",
+    "id": "minimax-m2.5"
+  },
+  {
+    "provider": "aiberm",
+    "id": "minimax-m2.7"
+  },
+  {
+    "provider": "aiberm",
+    "id": "minimax/minimax-m2.1"
+  },
+  {
+    "provider": "aiberm",
+    "id": "minimax/minimax-m2.5"
+  },
+  {
+    "provider": "aiberm",
+    "id": "minimax/minimax-m2.7"
+  },
+  {
+    "provider": "aiberm",
+    "id": "o3-mini"
+  },
+  {
+    "provider": "aiberm",
+    "id": "openai/gpt-4.1"
+  },
+  {
+    "provider": "aiberm",
+    "id": "openai/gpt-4.1-mini"
+  },
+  {
+    "provider": "aiberm",
+    "id": "openai/gpt-4.1-nano"
+  },
+  {
+    "provider": "aiberm",
+    "id": "openai/gpt-4o"
+  },
+  {
+    "provider": "aiberm",
+    "id": "openai/gpt-4o-mini"
+  },
+  {
+    "provider": "aiberm",
+    "id": "openai/gpt-5"
+  },
+  {
+    "provider": "aiberm",
+    "id": "openai/gpt-5-codex"
+  },
+  {
+    "provider": "aiberm",
+    "id": "openai/gpt-5-mini"
+  },
+  {
+    "provider": "aiberm",
+    "id": "openai/gpt-5-nano"
+  },
+  {
+    "provider": "aiberm",
+    "id": "openai/gpt-5.1-codex"
+  },
+  {
+    "provider": "aiberm",
+    "id": "openai/gpt-5.1-codex-max"
+  },
+  {
+    "provider": "aiberm",
+    "id": "openai/gpt-5.2"
+  },
+  {
+    "provider": "aiberm",
+    "id": "openai/gpt-5.2-chat"
+  },
+  {
+    "provider": "aiberm",
+    "id": "openai/gpt-5.2-codex"
+  },
+  {
+    "provider": "aiberm",
+    "id": "openai/gpt-5.3-codex"
+  },
+  {
+    "provider": "aiberm",
+    "id": "openai/gpt-5.4"
+  },
+  {
+    "provider": "aiberm",
+    "id": "openai/gpt-5.4-mini"
+  },
+  {
+    "provider": "aiberm",
+    "id": "openai/gpt-5.5"
+  },
+  {
+    "provider": "aiberm",
+    "id": "openai/o3-mini"
+  },
+  {
+    "provider": "aiberm",
+    "id": "openai/text-embedding-3-large"
+  },
+  {
+    "provider": "aiberm",
+    "id": "openai/text-embedding-3-small"
+  },
+  {
+    "provider": "aiberm",
+    "id": "openai/text-embedding-ada-002"
+  },
+  {
+    "provider": "aiberm",
+    "id": "qwen3.5-397b-a17b"
+  },
+  {
+    "provider": "aiberm",
+    "id": "qwen3.5-plus"
+  },
+  {
+    "provider": "aiberm",
+    "id": "qwen3.6-plus"
+  },
+  {
+    "provider": "aiberm",
+    "id": "qwen3.7-max"
+  },
+  {
+    "provider": "aiberm",
+    "id": "qwen3.7-plus"
+  },
+  {
+    "provider": "aiberm",
+    "id": "text-embedding-3-large"
+  },
+  {
+    "provider": "aiberm",
+    "id": "text-embedding-3-small"
+  },
+  {
+    "provider": "aiberm",
+    "id": "text-embedding-ada-002"
+  },
+  {
+    "provider": "aiberm",
+    "id": "xiaomi/mimo-v2-flash"
+  },
+  {
+    "provider": "openai-codex",
+    "id": "gpt-5.3-codex-spark"
+  },
+  {
+    "provider": "openai-codex",
+    "id": "gpt-5.4"
+  },
+  {
+    "provider": "openai-codex",
+    "id": "gpt-5.4-mini"
+  },
+  {
+    "provider": "openai-codex",
+    "id": "gpt-5.5"
+  },
+  {
+    "provider": "openai-codex",
+    "id": "gpt-5.6-luna"
+  },
+  {
+    "provider": "openai-codex",
+    "id": "gpt-5.6-sol"
+  },
+  {
+    "provider": "openai-codex",
+    "id": "gpt-5.6-terra"
+  }
+]

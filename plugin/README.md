@@ -29,6 +29,44 @@ AND the UI surfaces — `/plugins` panel, `/marketplace installed`,
   Only when neither surface exists does the tool refuse honestly.
   - Diagnostics: `OMP_QOL_PROBE=1` logs host-bridge reach
     (`../.sandbox/probe-host-bridge.ts`).
+- **QOL-004: agent-facing advisor tool.** One `advisor` tool gives the main
+  agent the same control over WATCHDOG advisors that a user has in the CLI —
+  a **thin driver** (ADR-005) over the host's own `advisor/config` helpers
+  and live-session methods; no YAML serializer or advisor logic re-implemented.
+  - **Ops (10)**: `list` / `get` read rosters (scope `project` file (default),
+    `user` file, or `effective` merged view — the one the host actually
+    runs); `upsert` / `remove` / `set_shared` edit a `WATCHDOG.yml` then
+    auto-run discover + live-apply; `apply` re-discovers now; `enable` /
+    `disable` flip the session flag (never discover); `status` reports live
+    per-advisor evidence (status / model / tokens / cost / messages /
+    contextTokens / sessionId + `activeCount`); `dump` returns advisor
+    conversation history.
+  - **Envelope**: every result is an optional one-line summary + a JSON body
+    `{ok, tool, op, …, warnings}` (failures: `{ok: false, error, action?}`
+    with `isError`), also attached as `details`. Parse with
+    `JSON.parse(text.slice(text.indexOf("{")))`. The goal and mode tools
+    speak the SAME envelope — one parsing rule for all three.
+  - **Approval tiers** (dynamic, per op): `list/get/status/dump` = `read`;
+    `upsert/remove/set_shared/apply/enable/disable` = `write` — mutate ops
+    write/delete files and enable starts billable runtimes (ADR-005 §D5
+    amendment, 2026-08-15).
+  - **Implicit default**: with zero configured advisors the host runs an
+    implicit `default` advisor on the advisor-role model. The tool shows it
+    live in `status`, lists it as a synthetic `{name: "default",
+    implicit: true}` entry in empty effective views, and manages it like any
+    other advisor (`upsert name=default` materializes overrides; `remove`
+    restores the implicit one) — a user-clarified pillar requirement.
+  - **Safety**: advisors are billable background models that watch every
+    primary turn; granting one `bash`/`write`/`edit` tools grants unattended
+    mutation power. Mutates REBUILD all advisor runtimes (in-flight advisor
+    turns abort; the result warns when that happened). An anti-clobber guard
+    refuses mutates that would silently overwrite an unparsable-but-nonempty
+    `WATCHDOG.yml` (the native loader maps those to an empty doc, and saving
+    an empty doc DELETES the file — `persisted`/`fileDeleted` report what
+    actually happened on disk). Same-path mutates are serialized; duplicate
+    slugs follow host last-wins semantics with warnings (also: rename,
+    CJK-slug fallback, unknown-tool → default read/grep/glob subset,
+    no_model, shadowed-entry warnings).
 - Session greeting + `/qol-config` command, and per-tool kill switches.
 
 Docs: research `../docs/researches/omp-goal-system.md`,
@@ -42,10 +80,15 @@ package.json        # omp.extensions entry + omp.settings schema
 src/main.ts         # plugin factory (ExtensionAPI, async)
 src/goal-tool.ts    # QOL-001 goal tool (shadow + native delegation)
 src/mode-tool.ts    # QOL-002/003 mode tool (thin driver over host primitives)
+src/advisor-tool.ts # QOL-004 advisor tool (thin driver over native advisor/config)
 src/lib/host-bridge.ts  # live AgentSession resolution via the injected host namespace
+src/lib/advisor-native.ts # locked imports of the host's advisor/config helpers
 src/lib/settings.ts # plugin settings loader (host API + lockfile fallback)
+test/setup.ts       # bun preload: pid-scoped PI_CONFIG_DIR isolation root
 test/goal-tool.test.ts  # bun test harness (12 cases)
 test/mode-tool.test.ts  # bun test harness (22 cases, incl. T1–T6 sealed-host path)
+test/advisor-tool.test.ts # L1 advisor unit tests (55 cases, A1–A25)
+test/advisor-integration.test.ts # L3 real-AgentSession advisor tests (14 cases, I1–I12)
 test/host-bridge.test.ts # real AgentRegistry edge cases (8 cases)
 test/integration-real-session.test.ts # real host session + scripted model (7 cases)
 ```
@@ -76,6 +119,7 @@ Declared in `package.json#omp.settings`; managed with
 | `notifyOnSessionStart` | boolean | `true`           |
 | `goalToolEnabled`      | boolean | `true`           |
 | `modeToolEnabled`      | boolean | `true`           |
+| `advisorToolEnabled`   | boolean | `true`           |
 
 ## Verify
 
@@ -84,11 +128,12 @@ Full pyramid (see the delivery test plan for exact commands):
 ```powershell
 bun run typecheck                              # tsc --noEmit, src clean
 bun ../.sandbox/link-dev-deps.ts               # one-time: monorepo junctions for the integration tests
-bun run test                                   # 49 cases, run serially per file
+bun run test                                   # 118 cases, single process (pid-scoped isolation preload)
 bun ../.sandbox/install-plugin.ts              # refresh delivery artifacts
 bun ../.sandbox/registry-probe.ts              # runtime + UI registry dual assertion
 bun ../.sandbox/verify-workspace.ts            # delivery-form RPC dumpTools (also --control / --source)
 bun ../.sandbox/e2e-workspace-mode.ts          # real LLM drives ALL 5 mode ops
+bun ../.sandbox/e2e-workspace-advisor.ts       # L6: scripted CRUD + multi-advisor real-traffic acceptance (isolated config root; artifacts under ../.sandbox/e2e-artifacts/)
 ```
 
 ## Development notes

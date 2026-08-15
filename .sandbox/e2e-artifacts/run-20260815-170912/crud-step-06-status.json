@@ -1,0 +1,41 @@
+{
+  "label": "crud step 6 (status)",
+  "prompt": "Call the tool named 'advisor' exactly once with parameters op=status. Do not call any other tool. Then reply with the single word DONE.",
+  "envelopes": [
+    {
+      "ok": true,
+      "tool": "advisor",
+      "op": "status",
+      "enabled": true,
+      "active": false,
+      "activeCount": 0,
+      "advisors": [
+        {
+          "name": "default",
+          "status": "no_model",
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "reasoning": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          },
+          "cost": 0,
+          "messages": {
+            "user": 0,
+            "assistant": 0,
+            "total": 0
+          },
+          "contextTokens": 0,
+          "contextWindow": 0
+        }
+      ],
+      "statusLine": "Advisor setting is enabled, but no model is assigned to the 'advisor' role.",
+      "warnings": []
+    }
+  ],
+  "rawTexts": [
+    "Advisor setting is enabled, but no model is assigned to the 'advisor' role.\n{\n  \"ok\": true,\n  \"tool\": \"advisor\",\n  \"op\": \"status\",\n  \"enabled\": true,\n  \"active\": false,\n  \"activeCount\": 0,\n  \"advisors\": [\n    {\n      \"name\": \"default\",\n      \"status\": \"no_model\",\n      \"tokens\": {\n        \"input\": 0,\n        \"output\": 0,\n        \"reasoning\": 0,\n        \"cacheRead\": 0,\n        \"cacheWrite\": 0,\n        \"total\": 0\n      },\n      \"cost\": 0,\n      \"messages\": {\n        \"user\": 0,\n        \"assistant\": 0,\n        \"total\": 0\n      },\n      \"contextTokens\": 0,\n      \"contextWindow\": 0\n    }\n  ],\n  \"statusLine\": \"Advisor setting is enabled, but no model is assigned to the 'advisor' role.\",\n  \"warnings\": []\n}"
+  ]
+}

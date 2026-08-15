@@ -1,0 +1,20 @@
+{
+  "label": "crud step 1 (status)",
+  "prompt": "Call the tool named 'advisor' exactly once with parameters op=status. Do not call any other tool. Then reply with the single word DONE.",
+  "envelopes": [
+    {
+      "ok": true,
+      "tool": "advisor",
+      "op": "status",
+      "enabled": false,
+      "active": false,
+      "activeCount": 0,
+      "advisors": [],
+      "statusLine": "Advisor is disabled.",
+      "warnings": []
+    }
+  ],
+  "rawTexts": [
+    "Advisor is disabled.\n{\n  \"ok\": true,\n  \"tool\": \"advisor\",\n  \"op\": \"status\",\n  \"enabled\": false,\n  \"active\": false,\n  \"activeCount\": 0,\n  \"advisors\": [],\n  \"statusLine\": \"Advisor is disabled.\",\n  \"warnings\": []\n}"
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "id": "req-get_session_stats-12",
+  "type": "response",
+  "command": "get_session_stats",
+  "success": true,
+  "data": {
+    "sessionFile": "C:\\Users\\15480\\.omp-qol-e2e-20260815-170912\\agent\\sessions\\-Desktop-AIWorkshop-repos-omp-qol-.sandbox-scratch-e2e-advisor-ws-20260815-170912-live\\2026-08-15T09-10-19-606Z_01a004af-b6d6-7000-bc99-51169a4a8b22.jsonl",
+    "sessionId": "01a004af-b6d6-7000-bc99-51169a4a8b22",
+    "userMessages": 8,
+    "assistantMessages": 15,
+    "toolCalls": 8,
+    "toolResults": 8,
+    "totalMessages": 31,
+    "tokens": {
+      "input": 6780,
+      "output": 1126,
+      "reasoning": 0,
+      "cacheRead": 382464,
+      "cacheWrite": 0,
+      "total": 390370
+    },
+    "cost": 0.014068519999999998,
+    "premiumRequests": 0,
+    "contextUsage": {
+      "tokens": 28511,
+      "contextWindow": 131072,
+      "percent": 21.752166748046875
+    }
+  }
+}

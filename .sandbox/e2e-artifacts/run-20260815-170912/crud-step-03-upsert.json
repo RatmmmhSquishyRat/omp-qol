@@ -1,0 +1,49 @@
+{
+  "label": "crud step 3 (upsert)",
+  "prompt": "Call the tool named 'advisor' exactly once with parameters op=upsert name=\"E2EReviewer\" instructions=\"Watch for regressions in this e2e session.\". Do not call any other tool. Then reply with the single word DONE.",
+  "envelopes": [
+    {
+      "ok": true,
+      "tool": "advisor",
+      "op": "upsert",
+      "persisted": true,
+      "fileDeleted": false,
+      "applied": true,
+      "effectiveAt": "immediate",
+      "source": "C:\\Users\\15480\\Desktop\\AIWorkshop\\repos\\omp-qol\\.sandbox\\scratch\\e2e-advisor-ws-20260815-170912-crud\\WATCHDOG.yml",
+      "verification": {
+        "enabled": true,
+        "active": false,
+        "activeCount": 0,
+        "advisors": [
+          {
+            "name": "E2EReviewer",
+            "status": "no_model",
+            "tokens": {
+              "input": 0,
+              "output": 0,
+              "reasoning": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            },
+            "cost": 0,
+            "messages": {
+              "user": 0,
+              "assistant": 0,
+              "total": 0
+            },
+            "contextTokens": 0,
+            "contextWindow": 0
+          }
+        ]
+      },
+      "warnings": [
+        "no_model: E2EReviewer — no model resolved (bad selector, or no advisor-role model configured). These advisors stay in the roster but never run. Fix their model field or configure an advisor-role model."
+      ]
+    }
+  ],
+  "rawTexts": [
+    "{\n  \"ok\": true,\n  \"tool\": \"advisor\",\n  \"op\": \"upsert\",\n  \"persisted\": true,\n  \"fileDeleted\": false,\n  \"applied\": true,\n  \"effectiveAt\": \"immediate\",\n  \"source\": \"C:\\\\Users\\\\15480\\\\Desktop\\\\AIWorkshop\\\\repos\\\\omp-qol\\\\.sandbox\\\\scratch\\\\e2e-advisor-ws-20260815-170912-crud\\\\WATCHDOG.yml\",\n  \"verification\": {\n    \"enabled\": true,\n    \"active\": false,\n    \"activeCount\": 0,\n    \"advisors\": [\n      {\n        \"name\": \"E2EReviewer\",\n        \"status\": \"no_model\",\n        \"tokens\": {\n          \"input\": 0,\n          \"output\": 0,\n          \"reasoning\": 0,\n          \"cacheRead\": 0,\n          \"cacheWrite\": 0,\n          \"total\": 0\n        },\n        \"cost\": 0,\n        \"messages\": {\n          \"user\": 0,\n          \"assistant\": 0,\n          \"total\": 0\n        },\n        \"contextTokens\": 0,\n        \"contextWindow\": 0\n      }\n    ]\n  },\n  \"warnings\": [\n    \"no_model: E2EReviewer — no model resolved (bad selector, or no advisor-role model configured). These advisors stay in the roster but never run. Fix their model field or configure an advisor-role model.\"\n  ]\n}"
+  ]
+}

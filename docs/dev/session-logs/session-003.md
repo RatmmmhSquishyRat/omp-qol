@@ -1,3 +1,5 @@
+> Note (2026-08-15 reconciliation): this is a build-phase DETAIL log, subordinate to `session-001.md` Turn 11 — the rework build ran as three parallel worker phases inside the session-001 conversation, not as a separate conversation.
+
 # Session 003: QOL-004 rework build phase 2 — L6 e2e acceptance
 
 **date**: 2026-08-15

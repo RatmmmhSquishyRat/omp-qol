@@ -1,0 +1,76 @@
+{
+  "ok": true,
+  "tool": "advisor",
+  "op": "status",
+  "enabled": true,
+  "active": true,
+  "activeCount": 2,
+  "advisors": [
+    {
+      "name": "Alpha",
+      "status": "running",
+      "model": "zai/glm-4.5-air",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "reasoning": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0,
+        "total": 0
+      },
+      "cost": 0,
+      "messages": {
+        "user": 0,
+        "assistant": 0,
+        "total": 0
+      },
+      "contextTokens": 0,
+      "contextWindow": 131072,
+      "sessionId": "01a004b0-2c1c-7000-b39e-95fcbee352e1"
+    },
+    {
+      "name": "Beta",
+      "status": "running",
+      "model": "deepseek/deepseek-v4-flash",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "reasoning": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0,
+        "total": 0
+      },
+      "cost": 0,
+      "messages": {
+        "user": 0,
+        "assistant": 0,
+        "total": 0
+      },
+      "contextTokens": 0,
+      "contextWindow": 1000000,
+      "sessionId": "01a004b0-2c1e-7000-bf42-062db6253ebc"
+    },
+    {
+      "name": "Gamma",
+      "status": "paused",
+      "tokens": {
+        "input": 0,
+        "output": 0,
+        "reasoning": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0,
+        "total": 0
+      },
+      "cost": 0,
+      "messages": {
+        "user": 0,
+        "assistant": 0,
+        "total": 0
+      },
+      "contextTokens": 0,
+      "contextWindow": 0
+    }
+  ],
+  "statusLine": "Advisors enabled (3):\n  • Alpha (zai/glm-4.5-air) — context 0 / 131,072 (0%) tokens, $0.0000\n  • Beta (deepseek/deepseek-v4-flash) — context 0 / 1,000,000 (0%) tokens, $0.0000\n  • Gamma [paused] — context 0 tokens, $0.0000\nTotals: 0 input, 0 output, $0.0000.",
+  "warnings": []
+}
