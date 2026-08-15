@@ -1,6 +1,6 @@
 # Phase 006: Official plugin packaging, marketplace install, and CI
 
-**commit**: `4f688a2` `feat: add marketplace catalog, CI, and official user install path`（docs-mapping 同回合随后一枚）
+**commit**: `4f688a2` `feat: add marketplace catalog, CI, and official user install path`；`49532a7` `docs: map distribution research, route, and session-001 turn 12`
 **date**: 2026-08-15
 
 ## Problem / Background

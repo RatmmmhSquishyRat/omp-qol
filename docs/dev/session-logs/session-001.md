@@ -1,7 +1,7 @@
 # Session 001: QOL-004 advisor docs
 
 **date**: 2026-08-15
-**commits**: `dda148b`, `475dfbd`, `49ea863`, `078f686`, `643e513`, `336d0ab`, `8feb59a`, `91f670b`, `bb88788`, `2a47408`, `4f688a2`（`336d0ab` 起为 Turn 10–11 rework；`4f688a2` 起为 Turn 12 分发）
+**commits**: `dda148b`, `475dfbd`, `49ea863`, `078f686`, `643e513`, `336d0ab`, `8feb59a`, `91f670b`, `bb88788`, `2a47408`, `4f688a2`, `49532a7`（`336d0ab` 起为 Turn 10–11 rework；`4f688a2`/`49532a7` 为 Turn 12 分发）
 
 ## Turn 1
 
@@ -290,6 +290,6 @@
 - 验证：`bun test` 118/118；`bun run typecheck` 0；隔离 `PI_CONFIG_DIR` 下官方 install 列出 `omp-qol@omp-qol (0.3.0) (user)`；未碰 `~/.omp`；未 npm publish。
 - 工作树本地 `marketplace add` 会连 `plugin/node_modules` 一起 cp，Windows 上 EPERM；git clone 无此问题。
 
-**commit**: `4f688a2`（work：catalog / CI / 官方安装路径）
+**commit**: `4f688a2`（work：catalog / CI / 官方安装路径）、`49532a7`（docs 映射）
 
 
