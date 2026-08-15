@@ -22,7 +22,7 @@
 - test-workspace 是否拥有自己的 `.git`
 - 根 `WATCHDOG.yml`
 - L6 e2e 进入默认 CI
-- 包名 `omp-qol-plugin`、版本 `0.3.0`（直到有意 bump）
+- 包名 `omp-qol-plugin`、版本 `0.3.1`（`v0.3.0` 打在无 workflow 的提交上，不复用）
 
 ## 名字
 
@@ -39,4 +39,4 @@
 
 ## 剩余人工步骤
 
-paste `NPM_TOKEN` / 配置 npm trusted publisher，然后打 `v0.3.0`（或下一个版本）tag。本设计不把「今天不能 publish」写成通道问题。
+仓库密钥 `NPM_TOKEN` 写入后，打新 tag `v0.3.1`（不要 force-move `v0.3.0`）。

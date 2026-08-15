@@ -1,7 +1,7 @@
 # Session 001: QOL-004 advisor docs
 
 **date**: 2026-08-15
-**commits**: `dda148b`, `475dfbd`, `49ea863`, `078f686`, `643e513`, `336d0ab`, `8feb59a`, `91f670b`, `bb88788`, `2a47408`, `4f688a2`, `49532a7`, `ca4f512`, `c9af694`（`336d0ab` 起为 Turn 10–11 rework；`4f688a2`/`49532a7` 为 Turn 12 分发；`ca4f512`/`c9af694` 为 Turn 13 分发重做）
+**commits**: `dda148b`, `475dfbd`, `49ea863`, `078f686`, `643e513`, `336d0ab`, `8feb59a`, `91f670b`, `bb88788`, `2a47408`, `4f688a2`, `49532a7`, `ca4f512`, `c9af694`, `dc23362`（`336d0ab` 起为 Turn 10–11 rework；`4f688a2`/`49532a7` 为 Turn 12 分发；`ca4f512`/`c9af694` 为 Turn 13 分发重做；`dc23362` 起为 Turn 14 默认 npm publish）
 
 ## Turn 1
 
@@ -378,5 +378,89 @@
 - 验证：`bun test` 118/118；typecheck 0；隔离 HOME 下 packed tarball 官方安装列出 `omp-qol-plugin@0.3.0`（npm 段）；`--scope project` 两次均 Ignoring；未写作者 `~/.omp/plugins/package.json`；未 npm publish。
 
 **commit**: `ca4f512`（work：删 catalog / npm 头条 / tag publish 作业）、`c9af694`（docs 映射）
+
+## Turn 14
+
+### User
+
+> You own a research-first, then-implement pass on omp-qol's GitHub Actions + npm publish path. The author rejected the previous 6-model review as too fragmented. Their point: CI/npm publish is a mature, universally-used OSS stack — default best practice already exists. Do NOT implement a laundry list of nits. Research the default, compare, then apply only what that default requires.
+>
+> Repo: C:\Users\15480\Desktop\AIWorkshop\repos\omp-qol (Windows, PowerShell — no heredoc; multi-line commits via temp file + `git commit -F`).
+>
+> ## Author (2026-08-15, VERBATIM — append to session-001 as a new turn; also a one-line clarification under the distribution pillar, do not rewrite)
+>
+> > C:\Users\15480\Desktop\AIWorkshop\repos\omp-qol\tmp_token.txt token已经创建好了, 实装之后自己删除.
+> > 然后, 你们要明白, ci workflow是他吗全开源社区都在用的, 最应该存在最佳实践的技术栈. 我不认为给出的问题应该向上述你们给出的这么琐碎. 我建议你们还是首先对于这个领域问题进行完整搜索调查研究, 给出默认最佳实践, 在用这个实践对照着目前项目现状, 进行后续工作. 这个任务不应该有这么难和复杂.
+>
+> ## TOKEN HANDLING — non-negotiable
+>
+> The file `C:\Users\15480\Desktop\AIWorkshop\repos\omp-qol\tmp_token.txt` contains an npm token.
+> - NEVER print, echo, log, commit, or paste the token into any file, chat, commit message, README, or workflow YAML.
+> - NEVER `Get-Content` it into your reply. NEVER pass it as a Task/prompt argument.
+> - Set it as a GitHub Actions secret by piping the file, e.g. PowerShell:
+>   `Get-Content -Raw C:\Users\15480\Desktop\AIWorkshop\repos\omp-qol\tmp_token.txt | gh secret set NPM_TOKEN --repo RatmmmhSquishyRat/omp-qol`
+>   Confirm `gh secret list` shows `NPM_TOKEN` exists (names only).
+> - AFTER the secret is set AND the implementation is committed/pushed, DELETE `tmp_token.txt` (and any copies you made). Confirm it is gone. If `gh secret set` fails, STOP, do not delete, report the failure without revealing the token.
+> - Do not put the token in repo secrets via editing files. Do not add it to `.env`.
+>
+> ## Skills / docs
+>
+> - C:\Users\15480\.codex\skills\github-master\SKILL.md
+> - C:\Users\15480\.agents\skills\technical-writing\SKILL.md
+> - Official sources first (fetch, don't invent): GitHub docs “Publishing Node.js packages”, “Automatic token authentication / GITHUB_TOKEN permissions”, npm docs “Trusted publishing” / “provenance”, actions/setup-node npm-publish example, oven-sh/setup-bun. Also look at how the host `oh-my-pi` and 1–2 real community omp plugins (omp-notify-tool etc.) actually CI/publish — as evidence of the default, not as extra requirements.
+> - Session: same conversation as `docs/dev/session-logs/session-001.md`. New journal phase sequential after phase-007.
+>
+> ## Phase 1 — research the DEFAULT (short, one file)
+>
+> Write `docs/researches/github-actions-npm-publish-default-2026.md` (Chinese, calm, evidence-backed). Answer only:
+> 1. What is the default OSS shape in 2026 for “one npm package, test on PR, publish on version tag”? Cite official docs. Keep it to the canonical job graph, permissions, secret name, working-directory, tag convention, provenance.
+> 2. What is explicitly NOT part of the default (Windows matrix, SHA-pinning every action, reusable-workflow extraction, environment protection for a solo repo, …) — list as “optional hardening, not default”.
+> 3. One table: default practice vs current `ci.yml` / `release.yml` / `plugin/package.json`. Only rows that are real gaps against the default.
+>
+> Known operational facts you must include (already empirically verified by prior reviewers — re-check with `git ls-remote --tags origin` and `gh run list`):
+> - `origin` already has `v0.3.0` pointing at `5392aef`, a commit with NO `.github/`. Re-pushing `v0.3.0` will not run Release. Metadata requires `tag === v${version}`. Default practice here is bump the package and tag a new version, not force-move a public tag.
+> - Live CI on ubuntu already passed 118 tests — do not “prove CI exists” again as a research question.
+>
+> ## Phase 2 — implement ONLY default gaps + the token
+>
+> Against that table, make the repo match the default. Expected (if research agrees — adjust if official docs disagree, and say so):
+>
+> - Keep two workflows: CI on push/PR, Release on `v*` tags. Do not invent a third workflow.
+> - Release: verify (install/test/typecheck/metadata) THEN publish from `plugin/` with `NODE_AUTH_TOKEN` / `NPM_TOKEN`, `registry-url`, `--access public`. Add `--provenance` if current npm+docs treat it as default for GHA (they do when `id-token: write` is present).
+> - Permissions: least privilege as GitHub documents it (`contents: read` default; write only on the job that creates a GitHub Release; `id-token: write` on publish).
+> - Tag interpolation: official GHA guidance is env-pass, not `${{ }}` inside `run:` strings. Do that — it's a one-line default, not a nit.
+> - `timeout-minutes` on jobs (GitHub documents this; 10–15 is enough).
+> - `concurrency` on CI (already there) and on Release (cancel/overlap of two tags).
+> - GitHub Release AFTER successful npm publish (`needs: [verify, npm-publish]`), because the user-facing install is npm. Making Release independent was a local invention, not the default.
+> - Bump `plugin/package.json` version to `0.3.1` (and any metadata script / README that hardcodes 0.3.0 as the next tag). Do not force-push `v0.3.0`.
+> - `workflow_dispatch` on Release is reasonable default for retry; add it.
+> - Do NOT: SHA-pin every action unless the official example does; do NOT add Windows matrix; do NOT extract reusable workflows; do NOT add deploy environments unless you are a team with required reviewers; do NOT rewrite typecheck/ambient stubs/peerDependencies in this pass unless official npm+omp install docs say the current `package.json` cannot publish. If you want to quickly `npm pack --dry-run` in verify because official examples include it, fine; otherwise skip.
+> - peerDependency optional / duplicate-host: OUT OF SCOPE this pass unless a 5-minute `npm pack` + inspect of `files` shows you would publish secrets or tests. Do not expand into host-bridge research.
+>
+> Set the GitHub secret as specified above. Delete `tmp_token.txt` after success.
+>
+> ## Phase 3 — close the loop
+>
+> - `bun test` in plugin/ still green.
+> - Commit (work + docs-mapping, repo style) and push to origin/master.
+> - Create and push tag `v0.3.1` on the commit that contains the workflows (so Release actually runs). Watch the Release workflow; if npm publish fails, fix the YAML (not the token display) and report. If it succeeds, record the npm package URL and the Actions run URL.
+> - Never `npm publish` from your laptop using the token file. Publish goes through Actions only.
+>
+> ## Integrity
+>
+> - Never touch repo-root `WATCHDOG.yml`. Never kill foreign omp. Never commit the token. Never weaken tests.
+> - If `gh` auth cannot set the secret, stop and say so — do not invent a workaround that writes the token into the repo.
+>
+> Report back: the default-practice table (gaps closed), version/tag used, whether `NPM_TOKEN` secret is set (yes/no only), whether `tmp_token.txt` is deleted, Release run URL + npm publish result, commit hashes. No token material in the report.
+
+### Agent Actions
+
+- 作者第三条澄清原文写入支柱，未改写。沿用 session-001。
+- 对照官方文档（GitHub Publishing Node.js packages、trusted publishing、provenance、setup-node、GITHUB_TOKEN 权限、env-pass）以及 `oh-my-pi` / `omp-notify-tool` / `omp-hooks`。默认是：CI 测 PR；`v*` tag 上 verify → `npm publish --provenance --access public`；GitHub Release 等 npm 成功。
+- 只补对照表缺口：Release 权限收紧、`--provenance`、Release `needs` npm、tag env-pass、timeout、Release concurrency、`workflow_dispatch`、版本 `0.3.1`。不 SHA-pin、不加 Windows 矩阵、不抽 reusable workflow。
+- `NPM_TOKEN` 经管道写入仓库密钥（只确认名字存在）。`v0.3.0` 仍指向无 `.github/` 的 `5392aef`，不 force-move。
+- `bun test` 118/118；typecheck 0；`npm pack --dry-run` 10 文件（src + README + LICENSE + package.json，无 test / 无密钥）。
+
+**commit**: `dc23362`（work：Release 对齐默认实践 / `0.3.1`）
 
 

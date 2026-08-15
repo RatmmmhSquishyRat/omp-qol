@@ -7,7 +7,7 @@
 ## What landed
 
 - 删除 `.omp-plugin/marketplace.json`。不维护仓内 catalog。
-- `plugin/package.json` 增加 `publishConfig.access=public` 与 `registry=https://registry.npmjs.org/`。包名保持 `omp-qol-plugin@0.3.0`。
+- `plugin/package.json` 增加 `publishConfig.access=public` 与 `registry=https://registry.npmjs.org/`。包名现为 `omp-qol-plugin@0.3.1`。
 - 根 README 与 `plugin/README.md` 头条改为 `omp plugin install omp-qol-plugin`。sandbox 安装器仍标 in-repo。
 - `.github/workflows/release.yml`：tag `v*` 上 verify → `npm-publish`（`id-token: write` + `NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}`）与独立的 GitHub Release。
 - `.sandbox/check-distribution-metadata.ts` 只对账 package + 可选 tag；若 catalog 文件还在则失败。
@@ -38,7 +38,7 @@ Scratch HOME: `C:\Users\15480\AppData\Local\Temp\omp-qol-dist-verify-20260815-18
 
 ## Remaining human step
 
-paste `NPM_TOKEN` / 配置 npm trusted publisher，然后打 `v0.3.0`（或下一个版本）tag。
+仓库密钥 `NPM_TOKEN` 已按默认名写入。第一发 tag 是 `v0.3.1`（`v0.3.0` 指向无 `.github/` 的 `5392aef`，不复用）。
 
 ## Host-doc vs code tensions (carried)
 

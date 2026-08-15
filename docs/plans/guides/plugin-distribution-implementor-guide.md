@@ -8,8 +8,8 @@
 - Clarification report reference: 上记重做报告
 - Selected route: A — 用户头条 `omp plugin install omp-qol-plugin`；`plugin/` 发到 npm
 - Locked stack and versions: omp 17.3.4 安装行为；Bun 加载 `./src/main.ts`；GitHub Actions bun 1.3；`npm publish` 在 `v*` tag
-- Accepted tradeoffs: `--scope project` 对 npm 无效；本轮不真实 publish；删除 `.omp-plugin/marketplace.json`
-- Deferred risks: packed tarball 的扩展校验须实测；trusted publisher 与 `NPM_TOKEN` 由作者配置
+- Accepted tradeoffs: `--scope project` 对 npm 无效；删除 `.omp-plugin/marketplace.json`；第一次发布走 tag `v0.3.1`
+- Deferred risks: packed tarball 的扩展校验须实测；trusted publisher 可后配，`NPM_TOKEN` 走仓库密钥
 
 ## 2. Project Constraints Snapshot
 
@@ -35,7 +35,7 @@
 ```json
 {
   "name": "omp-qol-plugin",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "files": ["src", "README.md", "LICENSE"],
   "publishConfig": {
     "access": "public",
@@ -110,13 +110,13 @@ omp plugin install omp-qol-plugin --scope project --dry-run
   - Required patterns: working-directory `plugin`；`bun run typecheck` 用 `tsconfig.plugin.json`；publish 用 `setup-node` 的 `registry-url` + `NODE_AUTH_TOKEN`
   - Forbidden patterns: 不要在 push 上 publish；不要把 L6 / 真模型测试放进默认 CI；不要为了绿而跳过 `bun test`
 - Key configurations:
-  - Mandatory settings: `secrets.NPM_TOKEN`（作者稍后粘贴）或 npm trusted publisher；`permissions.id-token: write`
+  - Mandatory settings: `secrets.NPM_TOKEN` 或 npm trusted publisher；`permissions.id-token: write`
   - Recommended defaults: bun-version `1.3`，与现网 CI 一致
 - Project-specific non-trivial example: 见 §7 Recipe 2
 - Pitfalls and diagnostics:
   - Symptom: tag 推上去之后 publish job 红
-  - Root cause: 还没有 `NPM_TOKEN`，也还没配 trusted publisher
-  - Fix: 这是预期的剩余人工步骤，不是选路失败
+  - Root cause: 密钥名不是 `NPM_TOKEN`，或 tag 与 `package.json` version 不一致
+  - Fix: 对照 `docs/researches/github-actions-npm-publish-default-2026.md`，不要改回市场通道
 - Verification:
   - Command or test: 用 GitHub 的 workflow 语法检查，或至少 YAML 可解析 + 本地复现 `bun test` / `typecheck`
   - Expected result: CI job 与本地同构命令绿
@@ -207,7 +207,7 @@ omp plugin install omp-qol-plugin --scope project --dry-run
 | --- | --- | --- | --- | --- | --- |
 | README -> 宿主 CLI | API | `omp plugin install omp-qol-plugin` | `marketplace add` 当头条 | 命令失败即文档错 | 随 17.3.4 行为，宿主改分类器再改文档 |
 | plugin/package.json -> PluginManager | schema | `name` + `omp.extensions` | 根 package.json 冒充插件 | 装得上但加载跳过，或校验失败回滚 | semver；tag `v` + version |
-| release.yml -> npm | API | tag job + `NPM_TOKEN` / OIDC | push 自动 publish | job 红；GitHub Release 仍可独立成功 | 同一 version 不可重复 publish |
+| release.yml -> npm | API | tag job + `NPM_TOKEN` / OIDC | push 自动 publish | job 红；GitHub Release 等 npm 成功 | 同一 version 不可重复 publish |
 | sandbox installer -> 用户 README | none | 标成 in-repo | 写成官方安装 | 验收污染作者 `~/.omp` | 不随 npm version 改机制 |
 | 已删除 catalog -> 宿主 MarketplaceManager | none | 不提交 | 再加回当默认通道 | 无 | n/a |
 
@@ -242,8 +242,8 @@ omp plugin install omp-qol-plugin --scope project --dry-run
 - Preconditions: `ci.yml` 已能跑 plugin 测试
 - Steps:
   1. `release.yml` 拆 verify / npm-publish / github-release
-  2. npm-publish：`id-token: write` + `NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}`
-  3. github-release 只依赖 verify，不依赖 publish（密钥未到时仍能切 Release）
+  2. npm-publish：`id-token: write` + `NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}` + `--provenance --access public`
+  3. github-release `needs: [verify, npm-publish]`（用户安装是 npm，Release 不能单独成功）
 - Key code snippet:
 ```yaml
 npm-publish:
@@ -259,10 +259,10 @@ npm-publish:
     - working-directory: plugin
       env:
         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      run: npm publish --access public
+      run: npm publish --provenance --access public
 ```
 - Validation checks: YAML 可解析；作业存在于 tag 工作流
-- Common failure and fix: 无 token 时 publish 红。这是剩余人工步骤，不要改回市场通道
+- Common failure and fix: tag 必须是 `v${version}` 且打在带 workflow 的提交上。不要 force-move `v0.3.0`
 
 ### Recipe 3: 隔离根证明 `--scope` 对 npm 的真实行为
 
@@ -327,7 +327,7 @@ omp plugin install omp-qol-plugin --scope project --dry-run
 | T2 | 去掉无必要市场 | catalog | 删 `.omp-plugin/marketplace.json` | 文件不在 git | 搜索不到头条依赖 |
 | T3 | README 头条 | 用户文档 | 改成 npm 命令；sandbox 标开发 | 根与 plugin README 一致 | 人工对照 |
 | T4 | CI 保持 | CI | 不跑宿主 tsc；不跑 L6 | push/PR 仍测 plugin | `bun test` / typecheck |
-| T5 | tag publish 作业 | Release | 加 npm-publish；不在本轮 publish | YAML 存在；无真实 npm 发布记录 | 不 `npm publish` 本机 |
+| T5 | tag publish 作业 | Release | verify → npm-publish → github-release；tag `v0.3.1` | Actions Release 绿；npm 有 `0.3.1` | 不本机 `npm publish` |
 | T6 | 官方路径取证 | 验证 | 隔离 HOME；dry-run scope；能则 pack+install | 警告与 list 证据写入 impl-notes | 不碰 `~/.omp` |
 
 ## 11. Sources and Confidence
