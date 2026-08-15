@@ -79,6 +79,26 @@ one native call. Nothing invented, nothing dropped.
 `configure` itself is a TUI editor. The agent does not open that overlay;
 it performs the same Save sequence with declarative fields (Track B).
 
+### Clarification (2026-08-15): the implicit "default" advisor is in scope
+
+User clarification, recorded verbatim in the pillar
+(`docs/ssot/pillars/self-managed-mode-switch/advisor-watchdog.md` §用户澄清):
+
+> 有一个问题啊, 主agent使用的默认advisor也需要能够被看到和配置以及开关啊, 这些用户在cli里面是都能够做到的, 和其他advisor操作没有区别
+
+Host facts this maps onto: with zero configured advisors the host runs one
+implicit advisor `{ name: "default" }` on the advisor-role model
+(`session-advisors.ts` legacy fallback, no file entry). The TUI seeds a
+`default` row in the configure editor and normalizes a bare `default`
+entry back to an empty roster on Save (`advisor-config.ts`). Capability
+map for it (no new ops; same rows as above): `status` sees it live;
+`upsert name="default"` materializes/overrides it; `upsert name="default"
+enabled=false` pauses only it; `remove name="default"` restores the
+implicit one. The tool annotates empty `list`/`get scope=effective` views
+so the agent can discover it, and mirrors the TUI bare-default Save
+normalization. Details: impl-notes Decision 8; proven at L3 I10 and L6
+steps 6–8.
+
 ### Native surfaces (do not reimplement)
 
 `AgentSession` already publishes:

@@ -64,25 +64,75 @@ without an `op` field; the implementation adds `op` as a strict superset.
 Design §Track B "read ops return text plus structured details" is now
 literally satisfied. No pillar was touched.
 
+### 8. Implicit "default" advisor is first-class (pillar clarification, 2026-08-15)
+
+User clarification recorded verbatim in the pillar
+(`docs/ssot/pillars/self-managed-mode-switch/advisor-watchdog.md` §用户澄清):
+the default advisor the main agent runs under must be visible, configurable,
+and toggleable through the tool, exactly like any other advisor in the CLI.
+
+Host facts (not plugin behavior):
+- With **zero** configured advisors, `SessionAdvisors#resolveAdvisorRuntimeDescriptors`
+  runs one implicit advisor `{ name: "default" }` on the advisor-role model
+  (host `session-advisors.ts`, legacy fallback). It lives in **no WATCHDOG file**.
+- The TUI configure editor **seeds** a `default` row when the doc is empty
+  (`advisor-config.ts #ensureRosterVisible`) and on Save **normalizes** a doc
+  that is exactly one bare `default` entry back to `{ advisors: [] }`
+  (`#isBareDefaultDoc`), so the implicit default is never shadowed by a no-op
+  file entry.
+
+Correction to earlier sections of this file: the e2e `default`
+(`kimi-code/k3`) was previously described as a "user-scope advisor" — wrong.
+No user WATCHDOG exists; it is this implicit legacy fallback. The L6 tables
+below have been corrected accordingly (marked, not silently rewritten).
+
+Plugin changes (thin-driver compliant — both mirror existing TUI behavior):
+- `list`/`get` `scope=effective` with an empty merge now annotate the body
+  (`implicitDefault: true` + note) so the model can *see* the implicit default
+  and knows the ops that manage it (`status` live view; `upsert name="default"`
+  materializes; `remove` restores; `enable`/`disable` global).
+- Mutate save now mirrors the TUI bare-default normalization: a doc reduced to
+  one bare `default` entry is saved as an empty roster, with an explicit
+  warning in the result; the misleading shadow warning is skipped in that case.
+- Tool description documents the implicit-default semantics.
+
+CLI-parity map for the default advisor (all proven at L3 I10 + L6):
+- see: `status` (live stats include `default` with status/model) — CLI `/advisor status`.
+- configure: `upsert name="default" …` (model/tools/instructions overrides) — CLI configure editor row.
+- pause only it: `upsert name="default" enabled=false` → status `paused` — CLI configure enabled toggle.
+- restore implicit: `remove name="default"` — CLI configure delete/bare-row Save.
+- global toggle: `enable`/`disable` — CLI `/advisor on|off`.
+
 ---
 
 ## Test Results
 
 | Level | File | Pass | Fail |
 |---|---|---|---|
-| L1 | `advisor-tool.test.ts` | 28 | 0 |
-| L3 | `advisor-integration.test.ts` | 10 | 0 |
+| L1 | `advisor-tool.test.ts` (A1–A19) | 34 | 0 |
+| L3 | `advisor-integration.test.ts` (I1–I10) | 12 | 0 |
 | Regression | `goal-tool` 12 + `mode-tool` 22 + `host-bridge` 8 + `integration-real-session` 7 | 49 | 0 |
-| **Total** | | **87** | **0** |
+| **Total** | single-process `bun test` | **95** | **0** |
 
-> Correction (2026-08-15 review): the earlier version of this table claimed
-> "47 regression / 85 total" — that arithmetic was wrong. The verified run
-> is 12+22+8+7 = 49 regression, 87 total. `host-bridge` H1 was observed to
-> be flaky under load (host self-import can exceed bun's default 5s per-test
-> timeout); H1 now carries an explicit 30s timeout with an unchanged assertion.
-> `bun run typecheck` is not usable in the junction/tsconfig-paths setup:
-> all 267 tsc errors come from the host repo's `.md` string imports
-> (bun-loader feature); plugin `src/` + `test/` have zero type errors.
+> Correction (2026-08-15 review): an earlier version of this table claimed
+> "47 regression / 85 total" — that arithmetic was wrong. `host-bridge` H1 was
+> observed to be flaky under load (host self-import can exceed bun's default
+> 5s per-test timeout); H1 now carries an explicit 30s timeout with an
+> unchanged assertion. `bun run typecheck` is not usable in the
+> junction/tsconfig-paths setup: all tsc errors come from the host repo's
+> `.md` string imports (bun-loader feature); plugin `src/` + `test/` have
+> zero type errors.
+
+> Test-infra fix (2026-08-15, implicit-default session): a bare single-process
+> `bun test` had **never** been green — the kill-switch tests (goal D2, mode
+> N12a) redirect `PI_CONFIG_DIR` in `beforeAll`, but the host's pi-utils
+> `DirResolver` freezes the config root at first module load, and the advisor
+> test files statically import host packages before any hook runs. The old
+> `package.json` test script masked this by running each file in its own
+> process. Fixed with a bun test preload (`test/setup.ts` + `bunfig.toml`)
+> that freezes `PI_CONFIG_DIR=.omp-qol-test-root` before any import; the
+> kill-switch tests write their lockfile into that root; the test script is
+> now a plain `bun test`. Verified green both single-process and per-file.
 
 ### Foundation gate coverage (F1–F7)
 
@@ -109,11 +159,11 @@ This is the path that was missing from the first impl report. It is **not** L1/L
 
 | Step | op | What actually happened |
 |---|---|---|
-| 1 | `status` | Host had merged user-scope advisor `default` (`kimi-code/k3`) running. Tool returned structured `{ "op": "status", "enabled": true, "active": true, "configured": true, "advisors": [{ "name": "default", "status": "running", "model": "kimi-code/k3" }] }`. |
+| 1 | `status` | Host was running the **implicit legacy `default` advisor** (`kimi-code/k3`; corrected 2026-08-15 — previously misdescribed as "user-scope": no user WATCHDOG exists, see Decision 8). Tool returned structured `{ "op": "status", "enabled": true, "active": true, "configured": true, "advisors": [{ "name": "default", "status": "running", "model": "kimi-code/k3" }] }`. |
 | 2 | `enable` | Returned structured `{ "op": "enable", "enabled": true, "active": true, "running": true, "discovered": false }`. Obeyed ADR-005 D3 (no discover). |
 | 3 | `upsert` name=`E2EReviewer` | `persisted: true`, `applied: true`, `effectiveAt: immediate`. `op: "upsert"`, `activeCount: 1`, `advisors: [{ name: "E2EReviewer", status: "running" }]`. Source = scratch `WATCHDOG.yml`, not `~/.omp`. |
 | 4 | `list` scope=`effective` | Returned structured `{ "op": "list", "scope": "effective", "advisors": [{ "name": "E2EReviewer", "instructions": "Watch for regressions in this e2e session." }] }`. |
-| 5 | `remove` name=`E2EReviewer` | `persisted: true`, `applied: true`, `op: "remove"`. User `default` advisor resurfaced in active roster (`activeCount: 1`). |
+| 5 | `remove` name=`E2EReviewer` | `persisted: true`, `applied: true`, `op: "remove"`. Implicit legacy `default` advisor resurfaced in active roster (`activeCount: 1`; corrected 2026-08-15, see Decision 8). |
 | 6 | `disable` | Returned structured `{ "op": "disable", "enabled": false, "active": false, "running": false, "discovered": false }`. |
 
 First-attempt gaps (so this is not silently rewritten as “always green”):
@@ -129,8 +179,9 @@ complete, untruncated text of every `tool_execution_end`. This closed two
 evidence gaps of the earlier report:
 - the earlier console truncated results at 280 chars, so `remove`'s
   verification block was partially inferred; the full rerun evidence shows
-  `remove` → `activeCount: 1` with user-scope `default` (`kimi-code/k3`)
-  back in the live roster — F4 semantics observed live;
+  `remove` → `activeCount: 1` with the implicit legacy `default`
+  (`kimi-code/k3`; corrected 2026-08-15, see Decision 8) back in the live
+  roster;
 - `upsert`'s live verification shows `E2EReviewer` running with the
   advisor-role default model resolved (`kimi-code/k3`).
 
@@ -150,6 +201,26 @@ Honest scope statement: L6 drives 6 of 10 ops through a real LLM
 four (`get`, `set_shared`, `apply`, `dump`) are covered at L1+L3 only —
 consistent with the TDD, which gates this milestone on L1+L3+L4 and marks
 L6 as optional (Foundation F8).
+
+### L6 rerun with implicit-default lifecycle (2026-08-15, 9 steps)
+
+After Decision 8's changes, the e2e sequence was extended to prove the
+pillar clarification end-to-end on `zai/glm-4.5-flash` (fresh scratch
+workspace, fresh plugin copy): **9/9 PASS**, full untruncated evidence.
+
+| Step | op | What actually happened |
+|---|---|---|
+| 6 | `status` (roster empty again) | Implicit `default` visible live: `advisors: [{ "name": "default", "status": "running", "model": "kimi-code/k3" }]`. |
+| 7 | `upsert` name=`default` enabled=false | `persisted: true`, `applied: true`, verification `advisors: [{ "name": "default", "status": "paused" }]`, `activeCount: 0` — the default alone paused while the advisor system stays enabled. |
+| 8 | `remove` name=`default` | `persisted: true`; verification shows implicit `default` back to `running` (`activeCount: 1`) — implicit restored. |
+| 9 | `disable` | `enabled: false, active: false` — global toggle unchanged. |
+
+(Steps 1–5 identical to the earlier table.) First attempt of this run
+timed out at step 8's **turn end**: the model stalled echoing the full
+ApplyResult JSON back as its chat reply. Harness fixes (assertions
+untouched): the reply instruction now asks for a one-word `DONE` (the
+assertions run on `tool_execution_end` frames, never on the reply), and
+the global timeout is 720s for 9 steps. Rerun passed 9/9.
 
 ---
 

@@ -1,0 +1,5 @@
+# Test preload: freezes the host config root onto an isolated directory
+# before any test file (and therefore any host module) is imported.
+# See test/setup.ts for the full rationale.
+[test]
+preload = ["./test/setup.ts"]

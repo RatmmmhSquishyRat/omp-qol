@@ -14,7 +14,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, beforeAll, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import { type } from "@oh-my-pi/omptype";
 import { Agent, type AgentTool } from "@oh-my-pi/pi-agent-core";
 import { createMockModel } from "@oh-my-pi/pi-ai/providers/mock";
@@ -35,10 +35,10 @@ import { resolveHostBridge } from "../src/lib/host-bridge";
 // Isolation
 // =============================================================================
 
-beforeAll(() => {
-	process.env.PI_CONFIG_DIR = ".omp-qol-l3-advisor";
-	// Keep PI_CODING_AGENT_DIR separate from tests — nativeGetAgentDir reads it
-});
+// Config-root isolation comes from test/setup.ts (bun preload), which froze
+// PI_CONFIG_DIR onto ~/.omp-qol-test-root before any host module loaded.
+// (Setting it here in beforeAll was too late for the host's DirResolver —
+// this file's static host imports freeze the root before hooks run.)
 
 // =============================================================================
 // Real-native wrapper: uses the actual advisor-native helpers but overrides
@@ -488,6 +488,64 @@ describe("I8: subdirectory cwd → edit path at repo root", () => {
 			try { await session.dispose(); } catch { /* best effort */ }
 			try { auth.close(); } catch { /* best effort */ }
 			try { fs.rmSync(tmp2, { recursive: true, force: true }); } catch { /* best effort */ }
+		}
+	});
+});
+
+// =============================================================================
+// I10: implicit "default" advisor — visible, configurable, toggleable through
+// the tool (CLI parity: the TUI seeds a default row and /advisor status shows
+// it live; host legacy fallback in session-advisors #resolveAdvisorRuntimeDescriptors)
+// =============================================================================
+
+describe("I10: implicit default advisor lifecycle via the tool", () => {
+	let h: Harness | undefined;
+	afterEach(async () => { await teardownHarness(h); h = undefined; });
+
+	test("empty roster → stats show 'default'; upsert enabled=false pauses it; remove restores implicit", async () => {
+		h = await makeRealAdvisorSession();
+
+		// (1) Enable with zero configured advisors → host runs the implicit legacy default.
+		const en = await h.tool.execute("t0", { op: "enable" });
+		expect(en.isError).toBeUndefined();
+		let stats = h.session.getAdvisorStats();
+		expect(stats.advisors.length).toBe(1);
+		expect(stats.advisors[0].name).toBe("default");
+
+		// list effective surfaces the implicit-default note (visible to the agent).
+		const list = await h.tool.execute("t1", { op: "list", scope: "effective" });
+		expect(list.isError).toBeUndefined();
+		expect(list.content[0].text).toContain("implicit");
+
+		// (2) Per-advisor toggle: materialize with enabled=false → paused, still visible.
+		const off = await h.tool.execute("t2", { op: "upsert", name: "default", enabled: false });
+		expect(off.isError).toBeUndefined();
+		stats = h.session.getAdvisorStats();
+		expect(stats.advisors.length).toBe(1);
+		expect(stats.advisors[0].name).toBe("default");
+		expect(stats.advisors[0].status).toBe("paused");
+
+		// (3) Remove the entry → file entry gone → implicit default resurfaces un-paused.
+		const rm = await h.tool.execute("t3", { op: "remove", name: "default" });
+		expect(rm.isError).toBeUndefined();
+		stats = h.session.getAdvisorStats();
+		expect(stats.advisors.length).toBe(1);
+		expect(stats.advisors[0].name).toBe("default");
+		expect(stats.advisors[0].status).not.toBe("paused");
+	});
+
+	test("upsert bare default → normalized away (mirrors TUI Save); no WATCHDOG entry left", async () => {
+		h = await makeRealAdvisorSession();
+
+		const result = await h.tool.execute("t0", { op: "upsert", name: "default" });
+		expect(result.isError).toBeUndefined();
+		const parsed = JSON.parse(result.content[0].text!) as { warnings: string[] };
+		expect(parsed.warnings.some(w => w.includes("not persisted"))).toBe(true);
+
+		// The project WATCHDOG must not contain a bare default entry.
+		if (fs.existsSync(h.watchdogPath)) {
+			const content = fs.readFileSync(h.watchdogPath, "utf8");
+			expect(content).not.toContain("name: default");
 		}
 	});
 });

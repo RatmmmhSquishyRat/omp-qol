@@ -5,7 +5,7 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "test": "bun test test/goal-tool.test.ts && bun test test/mode-tool.test.ts && bun test test/host-bridge.test.ts && bun test test/integration-real-session.test.ts && bun test test/advisor-tool.test.ts && bun test test/advisor-integration.test.ts",
+    "test": "bun test",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [

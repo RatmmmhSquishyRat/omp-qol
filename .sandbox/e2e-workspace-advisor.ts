@@ -2,7 +2,9 @@
  * Delivery-form e2e: installed omp + real LLM, project-scoped plugin.
  * Drives the advisor tool through a live session:
  *
- *   status -> enable -> upsert -> list -> remove -> disable
+ *   status -> enable -> upsert -> list -> remove
+ *   -> status (implicit default visible) -> upsert default enabled=false (paused)
+ *   -> remove default (implicit restored) -> disable
  *
  * Workspace is a throwaway git repo under .sandbox/scratch so
  * repo.root() does not resolve to omp-qol and WATCHDOG.yml never
@@ -108,6 +110,17 @@ const steps: Step[] = [
 	},
 	{ op: "list", extra: ' scope="effective"', expect: /"op": "list"[\s\S]*E2EReviewer/ },
 	{ op: "remove", extra: ' name="E2EReviewer"', expect: /"op": "remove"[\s\S]*"persisted": true/ },
+	// Implicit default advisor lifecycle (pillar clarification 2026-08-15):
+	// with the roster empty again, the host's implicit "default" advisor must
+	// be visible via status, pausable via upsert enabled=false, and restored
+	// (un-paused) by removing the materialized entry.
+	{ op: "status", expect: /"op": "status"[\s\S]*"name": "default"/ },
+	{
+		op: "upsert",
+		extra: ' name="default" enabled=false',
+		expect: /"op": "upsert"[\s\S]*"persisted": true[\s\S]*"default"[\s\S]*"paused"/,
+	},
+	{ op: "remove", extra: ' name="default"', expect: /"op": "remove"[\s\S]*"persisted": true[\s\S]*"default"/ },
 	{ op: "disable", expect: /"op": "disable"[\s\S]*"enabled": false/ },
 ];
 
@@ -123,7 +136,7 @@ const timeout = setTimeout(() => {
 	console.error(`[e2e-advisor] TIMEOUT at step ${stepIndex + 1}/${steps.length} (${steps[stepIndex]?.op})`);
 	proc.kill();
 	process.exit(2);
-}, 480_000);
+}, 720_000);
 
 const frameTypes: string[] = [];
 
@@ -137,7 +150,10 @@ function sendStepPrompt(step: Step): void {
 		type: "prompt",
 		message:
 			`Call the tool named 'advisor' exactly once with parameter op=${step.op}${step.extra ?? ""}. ` +
-			"Do not call any other tool. Then reply with only the exact text the tool returned, nothing else.",
+			// Assertions run on the tool_execution_end frame; the reply itself is
+			// unasserted. Asking for a one-word reply (instead of echoing the JSON)
+			// avoids long-echo stalls on small models.
+			"Do not call any other tool. Then reply with the single word DONE.",
 	});
 }
 

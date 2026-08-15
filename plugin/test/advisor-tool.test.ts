@@ -11,10 +11,7 @@
  * See docs/plans/TDDs/qol-004-advisor-tool-tests.md for the full matrix.
  */
 
-import * as fs from "node:fs";
-import * as os from "node:os";
-import * as path from "node:path";
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { z } from "zod/v4";
 import {
 	ADVISOR_TOOL_NAME,
@@ -25,22 +22,8 @@ import {
 import type { HostBridge } from "../src/lib/host-bridge";
 import factory from "../src/main";
 
-// =============================================================================
-// Isolation: PI_CONFIG_DIR -> temp dir, never writes ~/.omp
-// =============================================================================
-
-let testRoot: string;
-beforeAll(() => {
-	testRoot = fs.mkdtempSync(path.join(os.tmpdir(), "qol-l1-advisor-"));
-	process.env.PI_CONFIG_DIR = path.join(testRoot, ".omp-l1-test");
-});
-afterAll(() => {
-	try {
-		fs.rmSync(testRoot, { recursive: true, force: true });
-	} catch {
-		// best effort
-	}
-});
+// Isolation: test/setup.ts (bun preload) freezes PI_CONFIG_DIR onto
+// ~/.omp-qol-test-root before any import — nothing here touches ~/.omp.
 
 // =============================================================================
 // Mock builders
@@ -775,6 +758,107 @@ describe("A17/A18: kill switch and default behavior", () => {
 		});
 		const entry = tools.find(t => t.definition.name === ADVISOR_TOOL_NAME);
 		expect(entry).toBeDefined();
+	});
+});
+
+// =============================================================================
+// A19: implicit "default" advisor — visibility + bare-default normalization
+// (host runs one implicit advisor named "default" when zero are configured;
+// the tool must surface it and mirror the TUI configure-Save normalization)
+// =============================================================================
+
+describe("A19: implicit default advisor visibility and bare-default normalization", () => {
+	test("list scope=effective with empty merge → implicitDefault flag + note", async () => {
+		const calls: CallLog = [];
+		const { api, advisorTool } = makeAdvisorPi();
+		registerAdvisorTool(api as never, makeOptions(calls, { discoveredAdvisors: [] }));
+
+		const result = await advisorTool().execute("c", { op: "list", scope: "effective" });
+		expect(result.isError).toBeUndefined();
+		const text = result.content[0].text!;
+		const parsed = JSON.parse(text.slice(text.indexOf("{"))) as { implicitDefault?: boolean; note?: string };
+		expect(parsed.implicitDefault).toBe(true);
+		expect(parsed.note).toContain('"default"');
+		expect(parsed.note).toContain("status");
+	});
+
+	test("list scope=effective with advisors present → no implicitDefault field", async () => {
+		const calls: CallLog = [];
+		const { api, advisorTool } = makeAdvisorPi();
+		registerAdvisorTool(api as never, makeOptions(calls, { discoveredAdvisors: [{ name: "A" }] }));
+
+		const result = await advisorTool().execute("c", { op: "list", scope: "effective" });
+		const text = result.content[0].text!;
+		const parsed = JSON.parse(text.slice(text.indexOf("{"))) as { implicitDefault?: boolean };
+		expect(parsed.implicitDefault).toBeUndefined();
+	});
+
+	test("get name=default scope=effective on empty merge → error explains implicit default", async () => {
+		const calls: CallLog = [];
+		const { api, advisorTool } = makeAdvisorPi();
+		registerAdvisorTool(api as never, makeOptions(calls, { discoveredAdvisors: [] }));
+
+		const result = await advisorTool().execute("c", { op: "get", name: "default", scope: "effective" });
+		expect(result.isError).toBe(true);
+		expect(result.content[0].text).toContain("implicit");
+		expect(result.content[0].text).toContain('upsert name="default"');
+	});
+
+	test("upsert bare default → saved as empty roster (mirrors TUI Save); no shadow warning", async () => {
+		const calls: CallLog = [];
+		const { api, advisorTool } = makeAdvisorPi();
+		registerAdvisorTool(api as never, makeOptions(calls, { discoveredAdvisors: [] }));
+
+		const result = await advisorTool().execute("c", { op: "upsert", name: "default" });
+		expect(result.isError).toBeUndefined();
+		const parsed = JSON.parse(result.content[0].text!) as { persisted: boolean; warnings: string[] };
+		expect(parsed.persisted).toBe(true);
+		expect(parsed.warnings.some(w => w.includes("not persisted"))).toBe(true);
+		expect(parsed.warnings.some(w => w.startsWith("shadow:"))).toBe(false);
+
+		// Same fake-native closure: the project file must hold an empty roster.
+		const list = await advisorTool().execute("c2", { op: "list", scope: "project" });
+		const listText = list.content[0].text!;
+		const listParsed = JSON.parse(listText.slice(listText.indexOf("{"))) as { advisors: unknown[] };
+		expect(listParsed.advisors.length).toBe(0);
+	});
+
+	test("upsert default WITH overrides → persisted as a real entry (no normalization)", async () => {
+		const calls: CallLog = [];
+		const { api, advisorTool } = makeAdvisorPi();
+		registerAdvisorTool(api as never, makeOptions(calls, { discoveredAdvisors: [{ name: "default" }] }));
+
+		const result = await advisorTool().execute("c", { op: "upsert", name: "default", instructions: "focus on tests" });
+		expect(result.isError).toBeUndefined();
+		const parsed = JSON.parse(result.content[0].text!) as { warnings: string[] };
+		expect(parsed.warnings.some(w => w.includes("not persisted"))).toBe(false);
+
+		const list = await advisorTool().execute("c2", { op: "list", scope: "project" });
+		const listText = list.content[0].text!;
+		const listParsed = JSON.parse(listText.slice(listText.indexOf("{"))) as {
+			advisors: Array<{ name: string; instructions?: string }>;
+		};
+		expect(listParsed.advisors.length).toBe(1);
+		expect(listParsed.advisors[0].instructions).toBe("focus on tests");
+	});
+
+	test("upsert default enabled=false → persisted (per-advisor toggle is an override)", async () => {
+		const calls: CallLog = [];
+		const { api, advisorTool } = makeAdvisorPi();
+		registerAdvisorTool(api as never, makeOptions(calls, { discoveredAdvisors: [{ name: "default", enabled: false }] }));
+
+		const result = await advisorTool().execute("c", { op: "upsert", name: "default", enabled: false });
+		expect(result.isError).toBeUndefined();
+		const parsed = JSON.parse(result.content[0].text!) as { warnings: string[] };
+		expect(parsed.warnings.some(w => w.includes("not persisted"))).toBe(false);
+
+		const list = await advisorTool().execute("c2", { op: "list", scope: "project" });
+		const listText = list.content[0].text!;
+		const listParsed = JSON.parse(listText.slice(listText.indexOf("{"))) as {
+			advisors: Array<{ name: string; enabled?: boolean }>;
+		};
+		expect(listParsed.advisors.length).toBe(1);
+		expect(listParsed.advisors[0].enabled).toBe(false);
 	});
 });
 

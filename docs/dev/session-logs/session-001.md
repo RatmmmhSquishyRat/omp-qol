@@ -137,3 +137,44 @@
 
 **commit**: `078f686`
 
+## Turn 7
+
+### User
+
+> 所以目前OMP agents已经能够自己完全掌控advisor的配置和管理能力了吗? 它将具体如何操作?
+> 简要汇报
+
+### Agent Actions
+
+- 汇报 QOL-004 能力已闭环：单工具 `advisor` 覆盖 10 个操作（读 / 改配置 / 控开关）。
+- 说明具体交互方式与 JSON 结构化反馈机制，明确边界设计（默认 project scope、无 invoke 主动调度、宿主能力透明报错与 kill switch）。
+
+## Turn 8
+
+### User
+
+> 目前testworkspace的插件已经是最新?
+
+### Agent Actions
+
+- 校验 `test-workspace/.omp/plugins/` 安装缓存与 `plugin/src`、`plugin/package.json` 的一致性（`git diff --no-index` 差异为 0）。
+- 校验 `test-workspace/.omp/plugins/node_modules/omp-qol-plugin` junction 链接正常。
+- 运行 `.sandbox/verify-workspace.ts` 确认 L4 实时加载通过（goal + mode + advisor 10 个 op 全部就绪）。
+
+## Turn 9
+
+### User
+
+> 有一个问题啊, 主agent使用的默认advisor也需要能够被看到和配置以及开关啊, 这些用户在cli里面是都能够做到的, 和其他advisor操作没有区别
+
+### Agent Actions
+
+- 溯源宿主：`default` 是零配置时 `SessionAdvisors` 的隐式 legacy 回退（`session-advisors.ts`，模型走 advisor role），不在任何 WATCHDOG 文件；TUI configure 播种 `default` 行、Save 时把裸 default 归一化回空 roster（`advisor-config.ts`）。
+- 用户澄清原文追加至 pillar `advisor-watchdog.md` §用户澄清；design Track A 增补 Clarification 段；impl-notes 增补 Decision 8，并修正此前"user-scope default"的错误表述（标注修正，非静默改写）。
+- `advisor-tool.ts`：空 effective 视图注明隐式 default（`implicitDefault` + note）；mutate save 镜像 TUI 裸 default 归一化（含 warning、跳过误导性 shadow 警告）；工具 description 补语义。
+- 新增 L1 A19（6 例）与 L3 I10（2 例，真 AgentSession 上验证 default 可见→enabled=false 暂停→remove 恢复隐式）。
+- 修复存量测试隔离缺陷：裸 `bun test` 单进程从未真正绿过（pi-utils DirResolver 在首次模块加载冻结 PI_CONFIG_DIR，kill-switch 测试 beforeAll 改 env 已迟）；新增 bun preload `test/setup.ts` + `bunfig.toml` 统一冻结隔离根，kill-switch 测试硬编码同根，`package.json` test 脚本简化为裸 `bun test`。全量 95/95 绿（单进程与分文件均验证）。
+- e2e 扩至 9 步（status 见隐式 default → upsert default enabled=false 暂停 → remove 恢复），首跑 8/9 后卡在模型复述 JSON 的回话轮，harness 改回复 DONE + 超时 720s，重跑 9/9 PASS（zai/glm-4.5-flash，未截断证据落盘）。
+- 重装 test-workspace 插件并 L4 验证通过。
+
+

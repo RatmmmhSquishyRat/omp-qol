@@ -40,6 +40,37 @@ const ADVISOR_SURFACE_MISSING =
 
 const NATIVE_UNAVAILABLE_PREFIX = "Native advisor/config helpers unavailable";
 
+/**
+ * The host's legacy fallback: with zero configured advisors, SessionAdvisors
+ * runs one implicit advisor named "default" on the advisor-role model
+ * (host session-advisors.ts #resolveAdvisorRuntimeDescriptors). It lives in
+ * no WATCHDOG file, so file views cannot list it — op=status shows it live.
+ */
+const IMPLICIT_DEFAULT_NOTE =
+	'No advisors are configured, so while enabled the host runs one implicit advisor named "default" on the advisor-role model. ' +
+	"It exists in no WATCHDOG file; op=status shows it live. " +
+	'To customize it: upsert name="default" (materializes a real entry). To pause just it: upsert name="default" enabled=false. ' +
+	'To restore the implicit one: remove name="default". enable/disable toggles it with the whole advisor system.';
+
+/**
+ * Mirror of the TUI configure-Save normalization (host advisor-config.ts
+ * #isBareDefaultDoc + its save call): a doc whose only content is a bare
+ * "default" entry is persisted as an empty roster, so the host's implicit
+ * default advisor stays implicit instead of being shadowed by a no-op entry.
+ */
+function isBareDefaultDoc(doc: WatchdogConfigDoc): boolean {
+	if (doc.advisors.length !== 1 || doc.instructions?.trim()) return false;
+	const advisor = doc.advisors[0];
+	if (!advisor) return false;
+	return (
+		advisor.name === "default" &&
+		!advisor.model?.trim() &&
+		advisor.tools === undefined &&
+		!advisor.instructions?.trim() &&
+		advisor.enabled !== false
+	);
+}
+
 /** The shape every durable-mutation op returns. */
 export interface ApplyResult {
 	op: "upsert" | "remove" | "set_shared" | "apply";
@@ -202,7 +233,9 @@ export function registerAdvisorTool(pi: ExtensionAPI, options?: AdvisorToolOptio
 			"Ops: list (show roster), get (one advisor), upsert (create/update), remove (delete), " +
 			"set_shared (top-level instructions), apply (rediscover + apply after manual file edits), " +
 			"enable/disable (session toggle — not rediscovery), status (live stats), dump (history). " +
-			"Mutate ops auto-run save→discover→apply. Advisor is a bypass observer, not a task target.",
+			"Mutate ops auto-run save→discover→apply. Advisor is a bypass observer, not a task target. " +
+			"With zero configured advisors the host runs one implicit 'default' advisor (advisor-role model): " +
+			"live in status, absent from file views; upsert name=\"default\" materializes/overrides it, remove restores it.",
 		approval: "read",
 		loadMode: "essential",
 		parameters: z.object({
@@ -330,10 +363,14 @@ export function registerAdvisorTool(pi: ExtensionAPI, options?: AdvisorToolOptio
 				const scope: AdvisorScope = p.scope ?? "effective";
 				if (scope === "effective") {
 					const discovered = await native.nativeDiscoverAdvisors(cwd, agentDir);
-					return okJson(
-						{ op: "list", scope, ...discovered },
-						`scope=effective (${discovered.advisors.length} advisor(s) after merge)`,
-					);
+					const body: Record<string, unknown> = { op: "list", scope, ...discovered };
+					let summary = `scope=effective (${discovered.advisors.length} advisor(s) after merge)`;
+					if (discovered.advisors.length === 0) {
+						body.implicitDefault = true;
+						body.note = IMPLICIT_DEFAULT_NOTE;
+						summary += ` — host runs the implicit "default" advisor while enabled`;
+					}
+					return okJson(body, summary);
 				}
 				const dirs = { projectDir, agentDir };
 				const editPath = await native.nativeResolveEditPath(scope, dirs);
@@ -366,7 +403,10 @@ export function registerAdvisorTool(pi: ExtensionAPI, options?: AdvisorToolOptio
 					const s = a.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "advisor";
 					return s === slug || a.name === p.name;
 				});
-				if (!found) return err(`Advisor "${p.name}" not found in ${source}.`);
+				if (!found) {
+					const note = scope === "effective" && advisors.length === 0 ? ` ${IMPLICIT_DEFAULT_NOTE}` : "";
+					return err(`Advisor "${p.name}" not found in ${source}.${note}`);
+				}
 				return okJson(
 					{ op: "get", scope, source, advisor: found },
 					`scope=${scope} source=${source}`,
@@ -464,8 +504,19 @@ export function registerAdvisorTool(pi: ExtensionAPI, options?: AdvisorToolOptio
 
 				if (signal?.aborted) return err("Cancelled");
 
+				// Mirror TUI configure-Save: a doc reduced to one bare "default"
+				// entry is saved as an empty roster — the implicit default advisor
+				// already covers it, so no file entry is persisted.
+				const bareDefault = isBareDefaultDoc(doc);
+				if (bareDefault) {
+					warnings.push(
+						`normalized: a bare "default" entry (no overrides) is not persisted — mirrors the TUI configure-Save. ` +
+							`The host's implicit default advisor covers it; ${editPath} was saved with an empty roster.`,
+					);
+				}
+
 				// Save (native serializer — no hand-written YAML)
-				await native.nativeSaveConfigFile(editPath, doc);
+				await native.nativeSaveConfigFile(editPath, bareDefault ? { advisors: [] } : doc);
 
 				// Discover (full walk from cwd)
 				const discovered = await native.nativeDiscoverAdvisors(cwd, agentDir);
@@ -473,8 +524,10 @@ export function registerAdvisorTool(pi: ExtensionAPI, options?: AdvisorToolOptio
 				// Apply to live session
 				const activeCount = s.applyAdvisorConfigs!(discovered.advisors, discovered.sharedInstructions);
 
-				// Shadow warnings: advisors we wrote but that don't survive into effective
-				if (p.op === "upsert" && p.name) {
+				// Shadow warnings: advisors we wrote but that don't survive into effective.
+				// Skipped when bare-default normalization fired: the entry was
+				// intentionally not persisted, so its absence from effective is expected.
+				if (p.op === "upsert" && p.name && !bareDefault) {
 					const writtenSlug =
 						p.name
 							.toLowerCase()

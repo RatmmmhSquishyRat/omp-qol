@@ -499,11 +499,12 @@ describe("status / bridge / registration", () => {
 // =============================================================================
 
 describe("factory kill switch (mode tool)", () => {
-	// MUST share the exact root with goal-tool.test.ts: the host's XDG
-	// DirResolver pins the config root on first use per process, so whichever
-	// file's factory call runs first freezes the lockfile location for both.
-	const testRoot = path.join(os.homedir(), `.omp-qol-test-${process.pid}`);
-	const prevConfigDir = process.env.PI_CONFIG_DIR;
+	// test/setup.ts (bun preload) froze the host's config root onto this dir
+	// before any host module loaded (the pi-utils DirResolver pins it at first
+	// module load per process). Hardcoded rather than read from process.env:
+	// earlier test files may shift PI_CONFIG_DIR at runtime, but the frozen
+	// resolver keeps pointing here. Shared with goal-tool.test.ts.
+	const testRoot = path.join(os.homedir(), ".omp-qol-test-root");
 
 	function writeLock(settings: Record<string, unknown>): void {
 		const lock = { plugins: {}, settings: { "omp-qol-plugin": settings } };
@@ -512,13 +513,13 @@ describe("factory kill switch (mode tool)", () => {
 	}
 
 	beforeAll(() => {
-		process.env.PI_CONFIG_DIR = path.basename(testRoot);
+		// Re-assert for the plugin's own dynamic lockfile fallback (loadSettings
+		// reads PI_CONFIG_DIR per call, unlike the host's frozen resolver).
+		process.env.PI_CONFIG_DIR = ".omp-qol-test-root";
 	});
 
 	afterAll(() => {
-		if (prevConfigDir === undefined) delete process.env.PI_CONFIG_DIR;
-		else process.env.PI_CONFIG_DIR = prevConfigDir;
-		fs.rmSync(testRoot, { recursive: true, force: true });
+		fs.rmSync(path.join(testRoot, "plugins"), { recursive: true, force: true });
 	});
 
 	test("N12a: modeToolEnabled=false -> no mode tool, goal tool still registered", async () => {

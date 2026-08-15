@@ -300,8 +300,12 @@ describe("registration", () => {
 });
 
 describe("factory kill switch (isolated lockfile)", () => {
-	const testRoot = path.join(os.homedir(), `.omp-qol-test-${process.pid}`);
-	const prevConfigDir = process.env.PI_CONFIG_DIR;
+	// test/setup.ts (bun preload) froze the host's config root onto this dir
+	// before any host module loaded — write the lockfile where the host's
+	// frozen resolver actually reads it. Hardcoded rather than read from
+	// process.env: earlier test files may shift PI_CONFIG_DIR at runtime,
+	// but the frozen resolver keeps pointing here.
+	const testRoot = path.join(os.homedir(), ".omp-qol-test-root");
 
 	function writeLock(settings: Record<string, unknown>): void {
 		const lock = { plugins: {}, settings: { "omp-qol-plugin": settings } };
@@ -310,13 +314,13 @@ describe("factory kill switch (isolated lockfile)", () => {
 	}
 
 	beforeAll(() => {
-		process.env.PI_CONFIG_DIR = path.basename(testRoot);
+		// Re-assert for the plugin's own dynamic lockfile fallback (loadSettings
+		// reads PI_CONFIG_DIR per call, unlike the host's frozen resolver).
+		process.env.PI_CONFIG_DIR = ".omp-qol-test-root";
 	});
 
 	afterAll(() => {
-		if (prevConfigDir === undefined) delete process.env.PI_CONFIG_DIR;
-		else process.env.PI_CONFIG_DIR = prevConfigDir;
-		fs.rmSync(testRoot, { recursive: true, force: true });
+		fs.rmSync(path.join(testRoot, "plugins"), { recursive: true, force: true });
 	});
 
 	test("D2: goalToolEnabled=false -> factory registers no goal tool", async () => {
