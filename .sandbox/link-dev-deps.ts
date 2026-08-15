@@ -15,11 +15,16 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const packagesDir = path.resolve(repoRoot, "..", "..", "ref_repos", "oh-my-pi", "packages");
+const hostRoot = process.env.OMP_HOST_ROOT
+	? path.resolve(process.env.OMP_HOST_ROOT)
+	: path.resolve(repoRoot, "..", "..", "ref_repos", "oh-my-pi");
+const packagesDir = path.join(hostRoot, "packages");
 const linkRoot = path.join(repoRoot, "plugin", "node_modules", "@oh-my-pi");
 
 if (!fs.existsSync(packagesDir)) {
-	throw new Error(`monorepo packages not found at ${packagesDir}`);
+	throw new Error(
+		`monorepo packages not found at ${packagesDir} (set OMP_HOST_ROOT to the oh-my-pi checkout)`,
+	);
 }
 fs.mkdirSync(linkRoot, { recursive: true });
 

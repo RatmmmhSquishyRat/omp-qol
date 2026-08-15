@@ -1,0 +1,24 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "omp-qol",
+  "owner": {
+    "name": "RatmmmhSquishyRat"
+  },
+  "metadata": {
+    "description": "Quality-of-life plugins for omp (Oh My Pi)",
+    "version": "1"
+  },
+  "plugins": [
+    {
+      "name": "omp-qol",
+      "description": "Agent-facing goal, plan/vibe mode, and advisor (WATCHDOG) tools for omp",
+      "version": "0.3.0",
+      "source": "./plugin",
+      "homepage": "https://github.com/RatmmmhSquishyRat/omp-qol",
+      "repository": "https://github.com/RatmmmhSquishyRat/omp-qol",
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": ["omp", "qol", "goal", "plan", "vibe", "advisor"]
+    }
+  ]
+}

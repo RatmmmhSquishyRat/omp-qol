@@ -9,6 +9,9 @@ test-workspace/.omp/
 .sandbox/scratch/
 *.log
 
+# CI / local vendor checkout of the host (never commit)
+.vendor/
+
 # editor / OS noise
 .DS_Store
 Thumbs.db

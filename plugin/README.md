@@ -1,10 +1,26 @@
 # omp-qol-plugin
 
 Quality-of-life **plugin** for [omp (Oh My Pi)](https://github.com/can1357/oh-my-pi).
-Full plugin semantics: it installs as a proper omp plugin (runtime loading
-AND the UI surfaces — `/plugins` panel, `/marketplace installed`,
-`omp plugin list`) at **project scope**, with zero writes to the global
-`~/.omp`.
+
+## Install (users)
+
+```bash
+omp plugin marketplace add RatmmmhSquishyRat/omp-qol
+omp plugin install omp-qol@omp-qol
+```
+
+Project scope only:
+
+```bash
+omp plugin marketplace add RatmmmhSquishyRat/omp-qol
+omp plugin install --scope project omp-qol@omp-qol
+```
+
+Marketplace id is `omp-qol@omp-qol`. The npm/runtime package name remains
+`omp-qol-plugin` (used by `omp plugin config` and `node_modules`).
+
+No npm package is published yet. Do not use `omp plugin install omp-qol-plugin`
+until that remaining human step is done.
 
 ## What it does
 
@@ -93,20 +109,20 @@ test/host-bridge.test.ts # real AgentRegistry edge cases (8 cases)
 test/integration-real-session.test.ts # real host session + scripted model (7 cases)
 ```
 
-## Install (project scope, zero global writes)
+## In-repo development install (not the user path)
 
-The deterministic installer replicates the project-side artifacts of the
-host's own `MarketplaceManager.installPlugin(scope:"project")` under
-`../test-workspace/.omp/plugins/` (content cache copy + node_modules
-junction + lockfile + `installed_plugins.json`):
+The sandbox installer replicates MarketplaceManager project-side artifacts
+under `../test-workspace/.omp/plugins/` and does not write the developer’s
+`~/.omp`. Use it only inside this checkout:
 
 ```powershell
 bun ../.sandbox/install-plugin.ts          # idempotent; re-run after source changes
 ```
 
-Then launch omp from `../test-workspace` — the plugin is enabled and listed
-(`omp plugin list` → `omp-qol-plugin@local (0.3.0) (project)`). Mechanism
-and source evidence: `../docs/researches/omp-project-scoped-plugins.md` §5.4.
+Then launch omp from `../test-workspace` — `omp plugin list` shows
+`omp-qol-plugin@local (0.3.0) (project)`. Mechanism:
+`../docs/researches/omp-project-scoped-plugins.md` §5.4.
+Official packaging research: `../docs/researches/omp-plugin-packaging-and-distribution.md`.
 
 ## Plugin settings
 
@@ -126,7 +142,7 @@ Declared in `package.json#omp.settings`; managed with
 Full pyramid (see the delivery test plan for exact commands):
 
 ```powershell
-bun run typecheck                              # tsc --noEmit, src clean
+bun run typecheck                              # tsc -p tsconfig.plugin.json (plugin src only)
 bun ../.sandbox/link-dev-deps.ts               # one-time: monorepo junctions for the integration tests
 bun run test                                   # 118 cases, single process (pid-scoped isolation preload)
 bun ../.sandbox/install-plugin.ts              # refresh delivery artifacts
