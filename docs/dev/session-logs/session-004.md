@@ -1,7 +1,7 @@
 # Session 004: goal/plan/vibe 互斥互溶调查
 
 **date**: 2026-08-15
-**commits**:
+**commits**: `c4dee55`
 
 ## Turn 1
 
@@ -94,3 +94,5 @@
 ### Agent Actions
 
 - 只暂存本次互斥对齐：占用模块、mode/goal 工具与测试、pillar、session-004、phase-010 journal。不纳入 sandbox 产物、WATCHDOG.yml、demo-mini-app、mc-web。
+
+**commit**: `c4dee55`

@@ -1,6 +1,6 @@
 # Phase 010: Align plan/goal/vibe occupancy with the user-side table
 
-**commit**: pending
+**commit**: `c4dee55` `feat: align plan/goal/vibe occupancy with user-side paused mutex`
 **date**: 2026-08-15
 
 ## Problem / Background
