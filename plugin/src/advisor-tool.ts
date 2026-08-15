@@ -32,8 +32,9 @@ import type { AdvisorConfig, WatchdogConfigDoc } from "./lib/advisor-native";
  * enable / disable map only to setAdvisorEnabled — never discover (ADR-005
  * §Decision 3). apply = standalone rediscover + applyAdvisorConfigs.
  *
- * Every op returns one JSON envelope (also mirrored into `details`):
- *   success: { ok: true,  tool: "advisor", op, ...fields, warnings: [] }
+ * Every op returns one JSON envelope as pure JSON text (also mirrored into
+ * `details`) — no prose prefix, so `JSON.parse(text)` works on every result:
+ *   success: { ok: true,  tool: "advisor", op, summary?, ...fields, warnings: [] }
  *   failure: { ok: false, tool: "advisor", op, error, action? }
  */
 
@@ -225,12 +226,17 @@ function fail(op: string, error: string, action?: string) {
 	return { content: [{ type: "text" as const, text: JSON.stringify(body, null, 2) }], details: body, isError: true };
 }
 
-/** Success envelope: { ok:true, tool, op, ...fields } as JSON text + details. */
+/**
+ * Success envelope: { ok:true, tool, op, summary?, ...fields } as JSON text +
+ * details. Pure JSON — one parse rule across all ops and all three tools; the
+ * human-readable one-liner rides INSIDE the body as `summary`, not prefixed.
+ */
 function succeed(op: string, fields: Record<string, unknown>, summary?: string) {
-	const body: Record<string, unknown> = { ok: true, tool: ADVISOR_TOOL_NAME, op, ...fields };
+	const body: Record<string, unknown> = { ok: true, tool: ADVISOR_TOOL_NAME, op };
+	if (summary !== undefined) body.summary = summary;
+	Object.assign(body, fields);
 	if (!("warnings" in body)) body.warnings = [];
-	const json = JSON.stringify(body, null, 2);
-	return { content: [{ type: "text" as const, text: summary ? `${summary}\n${json}` : json }], details: body };
+	return { content: [{ type: "text" as const, text: JSON.stringify(body, null, 2) }], details: body };
 }
 
 function modelToString(model: LiveAdvisorStat["model"]): string | undefined {

@@ -507,10 +507,14 @@ type Envelope = Record<string, unknown> & {
 	warnings?: string[];
 };
 
+/** Results are pure JSON (the one-liner rides inside the body as `summary`),
+ *  so direct parse doubles as the no-prose-prefix assertion. */
 function parseEnvelope(text: string): Envelope {
-	const start = text.indexOf("{");
-	if (start < 0) throw new StepFailure(`no JSON object in tool result: ${text.slice(0, 300)}`);
-	return JSON.parse(text.slice(start)) as Envelope;
+	try {
+		return JSON.parse(text) as Envelope;
+	} catch {
+		throw new StepFailure(`tool result is not pure JSON: ${text.slice(0, 300)}`);
+	}
 }
 
 interface StatShape {

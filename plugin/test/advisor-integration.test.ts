@@ -78,12 +78,11 @@ interface AdvisorToolHandle {
 	execute: (toolCallId: string, params: Record<string, unknown>, signal?: AbortSignal) => Promise<ToolResult>;
 }
 
-/** Parse the JSON envelope from a result's text (skips a summary line if present). */
+/** Parse the JSON envelope from a result's text. Results are pure JSON (the
+ *  one-liner rides inside the body as `summary`), so direct parse doubles as
+ *  the no-prose-prefix assertion. */
 function parseEnvelope<T = Record<string, unknown>>(result: ToolResult): T {
-	const text = result.content[0]?.text ?? "";
-	const start = text.indexOf("{");
-	if (start < 0) throw new Error(`no JSON in result text: ${text}`);
-	return JSON.parse(text.slice(start)) as T;
+	return JSON.parse(result.content[0]?.text ?? "") as T;
 }
 
 /** Envelope slice for mutate-op results (upsert/remove/set_shared/apply). */

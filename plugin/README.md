@@ -41,11 +41,11 @@ AND the UI surfaces — `/plugins` panel, `/marketplace installed`,
     per-advisor evidence (status / model / tokens / cost / messages /
     contextTokens / sessionId + `activeCount`); `dump` returns advisor
     conversation history.
-  - **Envelope**: every result is an optional one-line summary + a JSON body
-    `{ok, tool, op, …, warnings}` (failures: `{ok: false, error, action?}`
-    with `isError`), also attached as `details`. Parse with
-    `JSON.parse(text.slice(text.indexOf("{")))`. The goal and mode tools
-    speak the SAME envelope — one parsing rule for all three.
+  - **Envelope**: every result is ONE JSON body, plain `JSON.parse(text)` on
+    every op — success `{ok, tool, op, summary?, …, warnings}` (the human
+    one-liner rides inside as `summary`), failure `{ok: false, error, action?}`
+    with `isError`; the same body is attached as `details`. The goal and mode
+    tools speak the SAME envelope — one parsing rule for all three.
   - **Approval tiers** (dynamic, per op): `list/get/status/dump` = `read`;
     `upsert/remove/set_shared/apply/enable/disable` = `write` — mutate ops
     write/delete files and enable starts billable runtimes (ADR-005 §D5
