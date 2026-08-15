@@ -1,7 +1,7 @@
 # Session 001: QOL-004 advisor docs
 
 **date**: 2026-08-15
-**commits**: `dda148b`, `475dfbd`, `49ea863`, `078f686`, `643e513`, `336d0ab`, `8feb59a`, `91f670b`, `bb88788`（Turn 10–11 rework；phase-3 docs commits 见 Turn 11 末尾）
+**commits**: `dda148b`, `475dfbd`, `49ea863`, `078f686`, `643e513`, `336d0ab`, `8feb59a`, `91f670b`, `bb88788`, `2a47408`（`336d0ab` 起为 Turn 10–11 rework）
 
 ## Turn 1
 
@@ -207,5 +207,7 @@
 - **Phase 3（plan F；本阶段）**：impl-notes 求真（F-gate 逐行重评——原评级虚高与 rework 补证两个事实并记；F8 拆分"脚本化工具驱动 CRUD"与"真实流量验收"；新增 Rework 章节含探针结论：`tools:[]`=无工具而全未知列表回退默认子集、重复 slug last-wins、按 op 动态 approval；计数 95→118 订正）；README/package.json 补 QOL-004；pillar 原文恢复 + 追加第二条用户澄清（验收判定原文）；session log 归并（本 Turn + session-002/003 顶部指针注）；journal phase-005；test-workspace 锚安全检查（发现见下）；插件重装并核对与源零差异；最终验证：`bun test` 118/118（597 断言）、plugin tsc 零错误（267 个 ref_repos `.md` 导入错误为已知环境噪声）、L6 终树重跑 run `20260815-170912` **PASS**（exit 0 首跑即过，~133 s：CRUD 9/9；Alpha assistant 0→3 / tokens 0→11 500 / $0.001616，Beta assistant 0→3 / tokens 0→11 595 / $0.000128，Gamma 全零无 transcript；工件 `.sandbox/e2e-artifacts/run-20260815-170912/`）。全部积压 commit 推送 origin。
 - **VERBATIM-DRIFT 事故（pillar，透明记录）**：工作树中存在一处未提交的 `docs/ssot/pillars/self-managed-mode-switch/advisor-watchdog.md` 编辑，删掉了 Turn 9 用户原话中的两个"啊"（真原文两处"啊"均在，已对照本会话 Turn 9 记录确认）。该编辑非任何 build 阶段所写、亦未被提交，来源未能定位；phase-2 worker 在提交前检查 git status 时发现并按 pillar-verbatim 规则上报、原样搁置。phase-3 以 `git diff` 核实该文件的全部工作树改动**仅有**这两处删字，无其他合法修改混入，遂 `git restore` 恢复提交版原文，再追加第二条澄清章节。事故按用户规则记录在案，不隐匿。
 - **test-workspace 锚安全发现**：`test-workspace/` 无自己的 `.git` → 宿主 `repo.root()` 上溯到 omp-qol 仓库根，只读探针证实从 test-workspace（含 `demo-mini-app/`）内启动的会话做 project-scope advisor 写操作会命中**生产文件** `C:\...\omp-qol\WATCHDOG.yml`（6 advisor）。这是宿主自身的锚定语义（TUI 同理），非插件缺陷；操作红线已写入 journal：advisor 写操作测试一律用 git-init 的 scratch 工作区（现有 e2e harness 均已如此），不从 test-workspace 发起。未擅自 `git init` test-workspace——是否让其会话看到仓库 6 advisor 属用户域决策，留由作者裁定。
+
+**commit**: `2a47408`（docs 求真 + run-170912 证据；随后一枚小映射 commit 回填本哈希）
 
 

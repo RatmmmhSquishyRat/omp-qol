@@ -1,6 +1,6 @@
 # Phase 005: Docs truth pass, pillar restoration, final verification & push
 
-**commit**: _(filled by the mapping commit)_
+**commit**: `2a47408` `docs: re-grade qol-004 evidence honestly and close the rework loop`
 **date**: 2026-08-15
 
 ## Problem / Background
