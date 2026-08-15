@@ -1,0 +1,22 @@
+{
+  "label": "crud step 4 (list)",
+  "prompt": "Call the tool named 'advisor' exactly once with parameters op=list scope=\"effective\". Do not call any other tool. Then reply with the single word DONE.",
+  "envelopes": [
+    {
+      "ok": true,
+      "tool": "advisor",
+      "op": "list",
+      "scope": "effective",
+      "advisors": [
+        {
+          "name": "E2EReviewer",
+          "instructions": "Watch for regressions in this e2e session."
+        }
+      ],
+      "warnings": []
+    }
+  ],
+  "rawTexts": [
+    "scope=effective (1 advisor(s) after merge)\n{\n  \"ok\": true,\n  \"tool\": \"advisor\",\n  \"op\": \"list\",\n  \"scope\": \"effective\",\n  \"advisors\": [\n    {\n      \"name\": \"E2EReviewer\",\n      \"instructions\": \"Watch for regressions in this e2e session.\"\n    }\n  ],\n  \"warnings\": []\n}"
+  ]
+}

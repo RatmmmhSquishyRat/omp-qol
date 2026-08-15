@@ -1,0 +1,10 @@
+advisors:
+  - name: Alpha
+    model: zai/glm-4.5-air
+    instructions: "Reply with at most one advise note per review, severity info only, under 15 words."
+  - name: Beta
+    model: deepseek/deepseek-v4-flash
+    instructions: "Reply with at most one advise note per review, severity info only, under 15 words."
+  - name: Gamma
+    model: zai/glm-4.5-air
+    enabled: false

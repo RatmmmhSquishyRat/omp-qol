@@ -1,0 +1,54 @@
+{
+  "mode": "isolated",
+  "isolatedRoot": "C:\\Users\\15480\\.omp-qol-e2e-20260815-164307",
+  "copied": [
+    {
+      "file": "agent.db",
+      "bytes": 11968512
+    },
+    {
+      "file": "agent.db-wal",
+      "bytes": 4161232
+    },
+    {
+      "file": "agent.db-shm",
+      "bytes": 32768
+    },
+    {
+      "file": "models.db",
+      "bytes": 499712
+    },
+    {
+      "file": "models.db-wal",
+      "bytes": 4169472
+    },
+    {
+      "file": "models.db-shm",
+      "bytes": 32768
+    },
+    {
+      "file": "models.yml",
+      "bytes": 1195
+    },
+    {
+      "file": ".env",
+      "bytes": 368
+    },
+    {
+      "file": "kimi-device-id",
+      "bytes": 33
+    }
+  ],
+  "scratchConfigYml": "# omp-qol e2e bootstrap — generated, throwaway\nsetupVersion: 1\nadvisor:\n  syncBacklog: \"1\"\nmodelRoles:\n  advisor: omp-qol-e2e-blocked/no-such-model\n",
+  "fallbackOverlay": null,
+  "neverCopied": [
+    "config.yml (user settings)",
+    "WATCHDOG.*",
+    "sessions/",
+    "history.db",
+    "AGENTS.md",
+    "memories/",
+    "extensions/",
+    "agents/"
+  ]
+}

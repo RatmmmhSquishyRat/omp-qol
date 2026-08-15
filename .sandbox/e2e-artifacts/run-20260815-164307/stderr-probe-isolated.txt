@@ -1,0 +1,2 @@
+Still starting after 10s — phase: loadExtensions
+  logs: C:\Users\15480\.omp-qol-e2e-20260815-164307\logs\omp.2026-08-15.79656.log · re-run with PI_DEBUG_STARTUP=1 for streaming phase markers

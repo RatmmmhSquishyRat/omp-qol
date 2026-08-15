@@ -1,0 +1,29 @@
+{
+  "label": "crud step 2 (enable)",
+  "prompt": "Call the tool named 'advisor' exactly once with parameters op=enable. Do not call any other tool. Then reply with the single word DONE.",
+  "envelopes": [
+    {
+      "ok": true,
+      "tool": "advisor",
+      "op": "enable",
+      "enabled": true,
+      "active": false,
+      "running": false,
+      "discovered": false,
+      "activeCount": 0,
+      "advisors": [
+        {
+          "name": "default",
+          "status": "no_model"
+        }
+      ],
+      "warnings": [
+        "no_model: default — no model resolved (bad selector, or no advisor-role model configured). These advisors stay listed but never run. Fix their model field or configure an advisor-role model.",
+        "enable turned the session flag ON, but no advisor runtime started. Check the roster in this result: entries at \"no_model\" need a valid model; entries at \"disabled\" have enabled=false."
+      ]
+    }
+  ],
+  "rawTexts": [
+    "advisor session flag ON — 0 runtime(s) running\n{\n  \"ok\": true,\n  \"tool\": \"advisor\",\n  \"op\": \"enable\",\n  \"enabled\": true,\n  \"active\": false,\n  \"running\": false,\n  \"discovered\": false,\n  \"activeCount\": 0,\n  \"advisors\": [\n    {\n      \"name\": \"default\",\n      \"status\": \"no_model\"\n    }\n  ],\n  \"warnings\": [\n    \"no_model: default — no model resolved (bad selector, or no advisor-role model configured). These advisors stay listed but never run. Fix their model field or configure an advisor-role model.\",\n    \"enable turned the session flag ON, but no advisor runtime started. Check the roster in this result: entries at \\\"no_model\\\" need a valid model; entries at \\\"disabled\\\" have enabled=false.\"\n  ]\n}"
+  ]
+}

@@ -1,0 +1,113 @@
+{
+  "label": "live T4 enable+status",
+  "prompt": "Call the tool named 'advisor' exactly twice, in order: first call with op=enable and no other parameters; second call with op=status and no other parameters. Do not call any other tool. Then reply with the single word DONE.",
+  "envelopes": [
+    {
+      "ok": true,
+      "tool": "advisor",
+      "op": "enable",
+      "enabled": true,
+      "active": true,
+      "running": true,
+      "discovered": false,
+      "activeCount": 2,
+      "advisors": [
+        {
+          "name": "Alpha",
+          "status": "running",
+          "model": "zai/glm-4.5-air"
+        },
+        {
+          "name": "Beta",
+          "status": "running",
+          "model": "deepseek/deepseek-v4-flash"
+        },
+        {
+          "name": "Gamma",
+          "status": "paused"
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "ok": true,
+      "tool": "advisor",
+      "op": "status",
+      "enabled": true,
+      "active": true,
+      "activeCount": 2,
+      "advisors": [
+        {
+          "name": "Alpha",
+          "status": "running",
+          "model": "zai/glm-4.5-air",
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "reasoning": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          },
+          "cost": 0,
+          "messages": {
+            "user": 0,
+            "assistant": 0,
+            "total": 0
+          },
+          "contextTokens": 0,
+          "contextWindow": 131072,
+          "sessionId": "01a00498-6dee-7000-943e-a104c9e3dffe"
+        },
+        {
+          "name": "Beta",
+          "status": "running",
+          "model": "deepseek/deepseek-v4-flash",
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "reasoning": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          },
+          "cost": 0,
+          "messages": {
+            "user": 0,
+            "assistant": 0,
+            "total": 0
+          },
+          "contextTokens": 0,
+          "contextWindow": 1000000,
+          "sessionId": "01a00498-6def-7000-958e-c82b754cbb9a"
+        },
+        {
+          "name": "Gamma",
+          "status": "paused",
+          "tokens": {
+            "input": 0,
+            "output": 0,
+            "reasoning": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "total": 0
+          },
+          "cost": 0,
+          "messages": {
+            "user": 0,
+            "assistant": 0,
+            "total": 0
+          },
+          "contextTokens": 0,
+          "contextWindow": 0
+        }
+      ],
+      "statusLine": "Advisors enabled (3):\n  • Alpha (zai/glm-4.5-air) — context 0 / 131,072 (0%) tokens, $0.0000\n  • Beta (deepseek/deepseek-v4-flash) — context 0 / 1,000,000 (0%) tokens, $0.0000\n  • Gamma [paused] — context 0 tokens, $0.0000\nTotals: 0 input, 0 output, $0.0000.",
+      "warnings": []
+    }
+  ],
+  "rawTexts": [
+    "advisor session flag ON — 2 runtime(s) running\n{\n  \"ok\": true,\n  \"tool\": \"advisor\",\n  \"op\": \"enable\",\n  \"enabled\": true,\n  \"active\": true,\n  \"running\": true,\n  \"discovered\": false,\n  \"activeCount\": 2,\n  \"advisors\": [\n    {\n      \"name\": \"Alpha\",\n      \"status\": \"running\",\n      \"model\": \"zai/glm-4.5-air\"\n    },\n    {\n      \"name\": \"Beta\",\n      \"status\": \"running\",\n      \"model\": \"deepseek/deepseek-v4-flash\"\n    },\n    {\n      \"name\": \"Gamma\",\n      \"status\": \"paused\"\n    }\n  ],\n  \"warnings\": []\n}",
+    "Advisors enabled (3):\n  • Alpha (zai/glm-4.5-air) — context 0 / 131,072 (0%) tokens, $0.0000\n  • Beta (deepseek/deepseek-v4-flash) — context 0 / 1,000,000 (0%) tokens, $0.0000\n  • Gamma [paused] — context 0 tokens, $0.0000\nTotals: 0 input, 0 output, $0.0000.\n{\n  \"ok\": true,\n  \"tool\": \"advisor\",\n  \"op\": \"status\",\n  \"enabled\": true,\n  \"active\": true,\n  \"activeCount\": 2,\n  \"advisors\": [\n    {\n      \"name\": \"Alpha\",\n      \"status\": \"running\",\n      \"model\": \"zai/glm-4.5-air\",\n      \"tokens\": {\n        \"input\": 0,\n        \"output\": 0,\n        \"reasoning\": 0,\n        \"cacheRead\": 0,\n        \"cacheWrite\": 0,\n        \"total\": 0\n      },\n      \"cost\": 0,\n      \"messages\": {\n        \"user\": 0,\n        \"assistant\": 0,\n        \"total\": 0\n      },\n      \"contextTokens\": 0,\n      \"contextWindow\": 131072,\n      \"sessionId\": \"01a00498-6dee-7000-943e-a104c9e3dffe\"\n    },\n    {\n      \"name\": \"Beta\",\n      \"status\": \"running\",\n      \"model\": \"deepseek/deepseek-v4-flash\",\n      \"tokens\": {\n        \"input\": 0,\n        \"output\": 0,\n        \"reasoning\": 0,\n        \"cacheRead\": 0,\n        \"cacheWrite\": 0,\n        \"total\": 0\n      },\n      \"cost\": 0,\n      \"messages\": {\n        \"user\": 0,\n        \"assistant\": 0,\n        \"total\": 0\n      },\n      \"contextTokens\": 0,\n      \"contextWindow\": 1000000,\n      \"sessionId\": \"01a00498-6def-7000-958e-c82b754cbb9a\"\n    },\n    {\n      \"name\": \"Gamma\",\n      \"status\": \"paused\",\n      \"tokens\": {\n        \"input\": 0,\n        \"output\": 0,\n        \"reasoning\": 0,\n        \"cacheRead\": 0,\n        \"cacheWrite\": 0,\n        \"total\": 0\n      },\n      \"cost\": 0,\n      \"messages\": {\n        \"user\": 0,\n        \"assistant\": 0,\n        \"total\": 0\n      },\n      \"contextTokens\": 0,\n      \"contextWindow\": 0\n    }\n  ],\n  \"statusLine\": \"Advisors enabled (3):\\n  • Alpha (zai/glm-4.5-air) — context 0 / 131,072 (0%) tokens, $0.0000\\n  • Beta (deepseek/deepseek-v4-flash) — context 0 / 1,000,000 (0%) tokens, $0.0000\\n  • Gamma [paused] — context 0 tokens, $0.0000\\nTotals: 0 input, 0 output, $0.0000.\",\n  \"warnings\": []\n}"
+  ]
+}

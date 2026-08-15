@@ -1,0 +1,51 @@
+{
+  "label": "crud step 5 (remove)",
+  "prompt": "Call the tool named 'advisor' exactly once with parameters op=remove name=\"E2EReviewer\". Do not call any other tool. Then reply with the single word DONE.",
+  "envelopes": [
+    {
+      "ok": true,
+      "tool": "advisor",
+      "op": "remove",
+      "persisted": true,
+      "fileDeleted": true,
+      "applied": true,
+      "effectiveAt": "immediate",
+      "source": "C:\\Users\\15480\\Desktop\\AIWorkshop\\repos\\omp-qol\\.sandbox\\scratch\\e2e-advisor-ws-20260815-164307-crud\\WATCHDOG.yml",
+      "verification": {
+        "enabled": true,
+        "active": false,
+        "activeCount": 0,
+        "advisors": [
+          {
+            "name": "default",
+            "status": "no_model",
+            "tokens": {
+              "input": 0,
+              "output": 0,
+              "reasoning": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            },
+            "cost": 0,
+            "messages": {
+              "user": 0,
+              "assistant": 0,
+              "total": 0
+            },
+            "contextTokens": 0,
+            "contextWindow": 0
+          }
+        ]
+      },
+      "warnings": [
+        "C:\\Users\\15480\\Desktop\\AIWorkshop\\repos\\omp-qol\\.sandbox\\scratch\\e2e-advisor-ws-20260815-164307-crud\\WATCHDOG.yml became empty and was deleted (native semantics: an empty doc removes the file). Discovery now falls back to other scopes, or to the implicit default advisor if none remain.",
+        "no_model: default — no model resolved (bad selector, or no advisor-role model configured). These advisors stay in the roster but never run. Fix their model field or configure an advisor-role model."
+      ],
+      "removed": 1
+    }
+  ],
+  "rawTexts": [
+    "{\n  \"ok\": true,\n  \"tool\": \"advisor\",\n  \"op\": \"remove\",\n  \"persisted\": true,\n  \"fileDeleted\": true,\n  \"applied\": true,\n  \"effectiveAt\": \"immediate\",\n  \"source\": \"C:\\\\Users\\\\15480\\\\Desktop\\\\AIWorkshop\\\\repos\\\\omp-qol\\\\.sandbox\\\\scratch\\\\e2e-advisor-ws-20260815-164307-crud\\\\WATCHDOG.yml\",\n  \"verification\": {\n    \"enabled\": true,\n    \"active\": false,\n    \"activeCount\": 0,\n    \"advisors\": [\n      {\n        \"name\": \"default\",\n        \"status\": \"no_model\",\n        \"tokens\": {\n          \"input\": 0,\n          \"output\": 0,\n          \"reasoning\": 0,\n          \"cacheRead\": 0,\n          \"cacheWrite\": 0,\n          \"total\": 0\n        },\n        \"cost\": 0,\n        \"messages\": {\n          \"user\": 0,\n          \"assistant\": 0,\n          \"total\": 0\n        },\n        \"contextTokens\": 0,\n        \"contextWindow\": 0\n      }\n    ]\n  },\n  \"warnings\": [\n    \"C:\\\\Users\\\\15480\\\\Desktop\\\\AIWorkshop\\\\repos\\\\omp-qol\\\\.sandbox\\\\scratch\\\\e2e-advisor-ws-20260815-164307-crud\\\\WATCHDOG.yml became empty and was deleted (native semantics: an empty doc removes the file). Discovery now falls back to other scopes, or to the implicit default advisor if none remain.\",\n    \"no_model: default — no model resolved (bad selector, or no advisor-role model configured). These advisors stay in the roster but never run. Fix their model field or configure an advisor-role model.\"\n  ],\n  \"removed\": 1\n}"
+  ]
+}
