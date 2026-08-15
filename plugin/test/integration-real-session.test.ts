@@ -312,4 +312,28 @@ describe("goal mutual exclusion on a real session", () => {
 		expect(blocked.content[0].text).toContain("goal is active");
 		expect(h.session.getPlanModeState()).toBeUndefined();
 	});
+
+	test("I5b: a real paused goal still occupies the slot", async () => {
+		h = await makeRealSession([done]);
+		await h.session.goalRuntime.createGoal({ objective: "paused goal" });
+		await h.session.goalRuntime.pauseGoal();
+		expect(h.session.getGoalModeState()?.goal?.status).toBe("paused");
+		expect(h.session.getGoalModeState()?.enabled).toBe(false);
+		const blocked = await h.tool.execute("c", { op: "plan_enter" });
+		expect(blocked.isError).toBe(true);
+		expect(blocked.content[0].text).toContain("goal is paused");
+		expect(blocked.content[0].text).toContain("Pause does not free the slot");
+		expect(h.session.getPlanModeState()).toBeUndefined();
+	});
+
+	test("I5c: real SessionManager plan_paused is readable via buildSessionContext and blocks vibe_enter", async () => {
+		h = await makeRealSession([done], { withVibeTools: true });
+		h.session.sessionManager.appendModeChange("plan_paused");
+		expect(h.session.getPlanModeState()).toBeUndefined();
+		expect(h.session.sessionManager.buildSessionContext().mode).toBe("plan_paused");
+		const blocked = await h.tool.execute("c", { op: "vibe_enter" });
+		expect(blocked.isError).toBe(true);
+		expect(blocked.content[0].text).toContain("Plan mode is paused");
+		expect(h.session.getVibeModeState()).toBeUndefined();
+	});
 });

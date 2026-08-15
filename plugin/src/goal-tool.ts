@@ -1,5 +1,7 @@
 import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
 import type * as Zod from "zod/v4";
+import { type HostBridge, type HostRootSurface, resolveHostBridge } from "./lib/host-bridge";
+import { refuseGoalBecauseOtherMode } from "./lib/mode-exclusivity";
 
 /**
  * QOL-001: agent-facing goal tool.
@@ -32,15 +34,22 @@ export const GOAL_TOOL_DESCRIPTION = `${GOAL_TOOL_MARKER} View and manage this s
 	"complete (mark the goal achieved), " +
 	"resume (resume a paused goal), " +
 	"drop (abandon the goal). " +
-	"Only one non-terminal goal may exist per session; create fails while one is active or paused.";
+	"Only one non-terminal goal may exist per session; create fails while one is active or paused. " +
+	"create/resume also refuse while plan or vibe occupies the slot (active or paused), same as the user's /goal.";
 
-export function registerGoalTool(pi: ExtensionAPI): void {
+export interface GoalToolOptions {
+	/** Test seam: override host-bridge resolution for plan/vibe occupancy. */
+	resolveBridge?: () => Promise<HostBridge | null>;
+}
+
+export function registerGoalTool(pi: ExtensionAPI, options?: GoalToolOptions): void {
 	// Real zod (root barrel exports it as `zod`) via the host's OWN injected
 	// namespace — no bare host imports, which the sealed installed binary
 	// cannot resolve from the plugin cache copy. Fall back to `pi.zod` for
 	// mocks/source hosts without the injected surface.
-	const injectedRoot = (pi as unknown as { pi?: { zod?: unknown } }).pi;
+	const injectedRoot = (pi as unknown as { pi?: HostRootSurface & { zod?: unknown } }).pi;
 	const z = (injectedRoot?.zod ?? pi.zod) as typeof Zod;
+	const resolveBridge = options?.resolveBridge ?? (() => resolveHostBridge(injectedRoot ?? null));
 
 	pi.registerTool({
 		name: GOAL_TOOL_NAME,
@@ -82,6 +91,14 @@ export function registerGoalTool(pi: ExtensionAPI): void {
 			};
 
 			if (signal?.aborted) return fail("Cancelled: the tool call was aborted before it ran.");
+
+			if (op === "create" || op === "resume") {
+				const bridge = await resolveBridge().catch(() => null);
+				if (bridge) {
+					const refused = refuseGoalBecauseOtherMode(bridge.session);
+					if (refused) return fail(refused.error, refused.action);
+				}
+			}
 
 			const invoke = ctx.invokeTool;
 			if (!invoke) {

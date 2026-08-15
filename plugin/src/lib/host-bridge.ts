@@ -85,6 +85,14 @@ export interface LiveHostSession {
 		getSessionFile(): string | null;
 		appendModeChange(mode: string, modeData?: Record<string, unknown>): void;
 		getCwd?(): string;
+		/**
+		 * Author's current-mode projection (InteractiveMode resume reads
+		 * `context.mode === "plan_paused"` from this). Always on the real
+		 * SessionManager.
+		 */
+		buildSessionContext?(): { mode?: string };
+		/** Public SessionManager API; fallback when `buildSessionContext` is absent. */
+		getEntries?(): Array<{ type?: string; mode?: string }>;
 	};
 	// -- Advisor surface (QOL-004) -------------------------------------------
 	// Declared as optional: a session that exposes plan/vibe but not advisor

@@ -1,6 +1,15 @@
 import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
 import type * as Zod from "zod/v4";
-import { buildVibeParentSession, type HostBridge, type HostRootSurface, type LiveHostSession, resolveHostBridge } from "./lib/host-bridge";
+import { buildVibeParentSession, type HostBridge, type HostRootSurface, resolveHostBridge } from "./lib/host-bridge";
+import {
+	goalOccupies,
+	goalStatusLabel,
+	planOccupies,
+	refuseGoalOccupancy,
+	refusePlanOccupancy,
+	refuseVibeOccupancy,
+	vibeOccupies,
+} from "./lib/mode-exclusivity";
 
 /**
  * QOL-002/003: agent-controlled plan & vibe modes — thin driver only.
@@ -93,11 +102,6 @@ export function registerModeTool(pi: ExtensionAPI, options?: ModeToolOptions): v
 		],
 	});
 
-	const goalActive = (s: LiveHostSession): boolean => {
-		const g = s.getGoalModeState?.();
-		return Boolean(g?.enabled) && g?.goal?.status !== "complete" && g?.goal?.status !== "dropped";
-	};
-
 	pi.registerTool({
 		name: MODE_TOOL_NAME,
 		label: "Mode",
@@ -107,7 +111,7 @@ export function registerModeTool(pi: ExtensionAPI, options?: ModeToolOptions): v
 			"draft the plan into PLAN.md. plan_exit: leave plan mode. vibe_enter: director mode " +
 			"with persistent vibe_spawn/vibe_send/vibe_wait/vibe_kill/vibe_list workers. " +
 			"vibe_exit: kill workers and restore the previous toolset. status: report mode state. " +
-			"Modes are mutually exclusive and blocked while a goal is active.",
+			"Modes are mutually exclusive — an active or paused goal/plan occupies the slot, same as the user's /plan, /vibe, and /goal. Pause does not free it.",
 		approval: "read",
 		loadMode: "essential",
 		parameters: z.object({
@@ -133,11 +137,14 @@ export function registerModeTool(pi: ExtensionAPI, options?: ModeToolOptions): v
 					if (s.getPlanModeState?.()?.enabled) {
 						return succeed("plan_enter", "Plan mode is already active.", { mode: "plan", active: true, alreadyActive: true });
 					}
-					if (s.getVibeModeState?.()?.enabled) {
-						return fail("plan_enter", "Vibe mode is active; plan and vibe are mutually exclusive.", "Exit it first: mode vibe_exit.");
+					if (vibeOccupies(s)) {
+						const refused = refuseVibeOccupancy();
+						return fail("plan_enter", refused.error, refused.action);
 					}
-					if (goalActive(s)) {
-						return fail("plan_enter", "A goal is active; modes are blocked while a goal runs.", "Complete or drop it first: goal op=complete or op=drop.");
+					const goal = goalOccupies(s);
+					if (goal) {
+						const refused = refuseGoalOccupancy(goal);
+						return fail("plan_enter", refused.error, refused.action);
 					}
 					if (s.settings?.get?.("plan.enabled") === false) {
 						return fail("plan_enter", "Plan mode is disabled in settings (plan.enabled=false).", "Ask the user to enable plan.enabled in omp settings.");
@@ -146,13 +153,16 @@ export function registerModeTool(pi: ExtensionAPI, options?: ModeToolOptions): v
 					const previous = s.getPlanModeState?.() as
 						| { planFilePath?: string; workflow?: string }
 						| undefined;
+					const planFilePath = previous?.planFilePath ?? DEFAULT_PLAN_FILE_URL;
 					s.setPlanModeState?.({
 						enabled: true,
-						planFilePath: previous?.planFilePath ?? DEFAULT_PLAN_FILE_URL,
+						planFilePath,
 						workflow: previous?.workflow ?? "parallel",
 						reentry: previous !== undefined,
 					});
 					s.setPlanProposalHandler?.(planProposalHandler);
+					// Same journal the TUI writes; `buildSessionContext().mode` reads this.
+					s.sessionManager?.appendModeChange?.("plan", { planFilePath });
 					return succeed(
 						"plan_enter",
 						`Plan mode is now ACTIVE${p.objective?.trim() ? ` — objective: ${p.objective.trim()}` : ""}. ` +
@@ -165,6 +175,7 @@ export function registerModeTool(pi: ExtensionAPI, options?: ModeToolOptions): v
 					if (!s.getPlanModeState?.()?.enabled) return fail("plan_exit", "Plan mode is not active; nothing to exit.");
 					s.setPlanProposalHandler?.(null);
 					s.setPlanModeState?.(undefined);
+					s.sessionManager?.appendModeChange?.("none");
 					return succeed(
 						"plan_exit",
 						"Plan mode exited; the working tree is writable again. " +
@@ -176,11 +187,15 @@ export function registerModeTool(pi: ExtensionAPI, options?: ModeToolOptions): v
 					if (s.getVibeModeState?.()?.enabled) {
 						return succeed("vibe_enter", "Vibe mode is already active.", { mode: "vibe", active: true, alreadyActive: true });
 					}
-					if (s.getPlanModeState?.()?.enabled) {
-						return fail("vibe_enter", "Plan mode is active; plan and vibe are mutually exclusive.", "Exit it first: mode plan_exit.");
+					const plan = planOccupies(s);
+					if (plan) {
+						const refused = refusePlanOccupancy(plan);
+						return fail("vibe_enter", refused.error, refused.action);
 					}
-					if (goalActive(s)) {
-						return fail("vibe_enter", "A goal is active; modes are blocked while a goal runs.", "Complete or drop it first: goal op=complete or op=drop.");
+					const goal = goalOccupies(s);
+					if (goal) {
+						const refused = refuseGoalOccupancy(goal);
+						return fail("vibe_enter", refused.error, refused.action);
 					}
 					const registryPath = Boolean(bridge.vibeRegistry && bridge.vibeRegistryTrusted);
 					const toolsPath = !registryPath && typeof injectedRoot?.VibeListTool === "function" && typeof injectedRoot.VibeKillTool === "function";
@@ -257,12 +272,14 @@ export function registerModeTool(pi: ExtensionAPI, options?: ModeToolOptions): v
 				}
 				default: {
 					const plan = Boolean(s.getPlanModeState?.()?.enabled);
-					const vibe = Boolean(s.getVibeModeState?.()?.enabled);
-					const goal = goalActive(s) ? "active" : "none";
+					const planPaused = !plan && planOccupies(s) === "paused";
+					const vibe = vibeOccupies(s);
+					const goal = goalStatusLabel(s);
+					const planLabel = planPaused ? "paused" : plan ? "on" : "off";
 					return succeed(
 						"status",
-						`plan: ${plan ? "on" : "off"} | vibe: ${vibe ? "on" : "off"} | goal: ${goal}`,
-						{ plan, vibe, goal },
+						`plan: ${planLabel} | vibe: ${vibe ? "on" : "off"} | goal: ${goal}`,
+						{ plan, vibe, goal, planPaused },
 					);
 				}
 			}

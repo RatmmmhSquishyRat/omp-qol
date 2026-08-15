@@ -70,7 +70,8 @@ function makeFakeSession() {
 		vibe?: { enabled?: boolean };
 		goal?: { enabled?: boolean; goal?: { status?: string } };
 		settings: Record<string, unknown>;
-	} = { settings: {} };
+		journal: Array<{ type?: string; mode?: string }>;
+	} = { settings: {}, journal: [] };
 	let active = ["read", "write", "edit", "bash", "todo", "task", "goal", "mode"];
 	const calls: string[] = [];
 	let proposalHandler: ((title: string) => unknown) | null = null;
@@ -105,6 +106,17 @@ function makeFakeSession() {
 		sessionManager: {
 			getSessionId: () => "sess-1",
 			getSessionFile: () => "/tmp/sess.jsonl",
+			appendModeChange: (mode: string) => {
+				state.journal.push({ type: "mode_change", mode });
+			},
+			getEntries: () => [...state.journal],
+			buildSessionContext: () => {
+				let mode = "none";
+				for (const entry of state.journal) {
+					if (entry.type === "mode_change" && typeof entry.mode === "string") mode = entry.mode;
+				}
+				return { mode };
+			},
 		},
 	};
 	return {
@@ -170,6 +182,7 @@ describe("plan mode (native switch)", () => {
 		});
 		expect(fake.calls).toContain("setPlanProposalHandler:set");
 		expect(fake.getProposalHandler()).toBeTruthy();
+		expect(fake.state.journal.at(-1)).toEqual({ type: "mode_change", mode: "plan" });
 		// Host primitives untouched by us: no tool-list changes (ACP parity).
 		expect(fake.calls).not.toContain("activateVibeTools");
 	});
@@ -218,6 +231,84 @@ describe("plan mode (native switch)", () => {
 		const blockedByGoal = await tool.execute("c", { op: "plan_enter" });
 		expect(blockedByGoal.isError).toBe(true);
 		expect(blockedByGoal.content[0].text).toContain("goal is active");
+		expect(blockedByGoal.content[0].text).toContain("Pausing the goal does not free the slot");
+	});
+
+	test("N2b: paused goal occupies the slot — blocks plan_enter and vibe_enter", async () => {
+		const pi = makeModePi();
+		const { bridge, fake } = makeNativeBridge();
+		registerModeTool(pi.api as never, { resolveBridge: async () => bridge });
+		const tool = pi.modeTool();
+		fake.state.goal = { enabled: false, goal: { status: "paused" } };
+
+		const planBlocked = await tool.execute("c", { op: "plan_enter" });
+		expect(planBlocked.isError).toBe(true);
+		expect(planBlocked.content[0].text).toContain("goal is paused");
+		expect(planBlocked.content[0].text).toContain("Pause does not free the slot");
+		expect(fake.state.plan).toBeUndefined();
+
+		const vibeBlocked = await tool.execute("c", { op: "vibe_enter" });
+		expect(vibeBlocked.isError).toBe(true);
+		expect(vibeBlocked.content[0].text).toContain("goal is paused");
+		expect(fake.state.vibe).toBeUndefined();
+	});
+
+	test("N2c: journal plan_paused occupies the slot for vibe_enter; plan_enter may re-enter", async () => {
+		const pi = makeModePi();
+		const { bridge, fake } = makeNativeBridge();
+		registerModeTool(pi.api as never, { resolveBridge: async () => bridge });
+		const tool = pi.modeTool();
+		fake.state.journal.push({ type: "mode_change", mode: "plan_paused" });
+
+		const vibeBlocked = await tool.execute("c", { op: "vibe_enter" });
+		expect(vibeBlocked.isError).toBe(true);
+		expect(vibeBlocked.content[0].text).toContain("Plan mode is paused");
+		expect(vibeBlocked.content[0].text).toContain("Pause does not free the slot");
+		expect(fake.state.vibe).toBeUndefined();
+
+		// Same-mode re-enter: TUI #enterPlanMode does not treat planPaused as a foreign mode.
+		const planEnter = await tool.execute("c", { op: "plan_enter" });
+		expect(planEnter.isError).toBeUndefined();
+		expect(fake.state.plan?.enabled).toBe(true);
+	});
+
+	test("N2e: buildSessionContext.mode is enough when getEntries is absent", async () => {
+		const pi = makeModePi();
+		const { bridge, fake } = makeNativeBridge();
+		delete (fake.session.sessionManager as { getEntries?: unknown }).getEntries;
+		fake.session.sessionManager.buildSessionContext = () => ({ mode: "plan_paused" });
+		registerModeTool(pi.api as never, { resolveBridge: async () => bridge });
+		const tool = pi.modeTool();
+		const vibeEnter = await tool.execute("c", { op: "vibe_enter" });
+		expect(vibeEnter.isError).toBe(true);
+		expect(vibeEnter.content[0].text).toContain("Plan mode is paused");
+		expect(fake.state.vibe).toBeUndefined();
+	});
+
+	test("N2f: buildSessionContext wins over a stale getEntries tail", async () => {
+		const pi = makeModePi();
+		const { bridge, fake } = makeNativeBridge();
+		fake.session.sessionManager.getEntries = () => [{ type: "mode_change", mode: "plan_paused" }];
+		fake.session.sessionManager.buildSessionContext = () => ({ mode: "none" });
+		registerModeTool(pi.api as never, { resolveBridge: async () => bridge });
+		const tool = pi.modeTool();
+		const vibeEnter = await tool.execute("c", { op: "vibe_enter" });
+		expect(vibeEnter.isError).toBeUndefined();
+		expect(fake.state.vibe?.enabled).toBe(true);
+	});
+
+	test("N2d: complete/dropped goals do not occupy the slot", async () => {
+		const pi = makeModePi();
+		const { bridge, fake } = makeNativeBridge();
+		registerModeTool(pi.api as never, { resolveBridge: async () => bridge });
+		const tool = pi.modeTool();
+		fake.state.goal = { enabled: false, goal: { status: "complete" } };
+		const afterComplete = await tool.execute("c", { op: "plan_enter" });
+		expect(afterComplete.isError).toBeUndefined();
+		await tool.execute("c", { op: "plan_exit" });
+		fake.state.goal = { enabled: false, goal: { status: "dropped" } };
+		const afterDropped = await tool.execute("c", { op: "plan_enter" });
+		expect(afterDropped.isError).toBeUndefined();
 	});
 
 	test("N3: plan_exit clears handler + state; exit without plan errors", async () => {
@@ -458,7 +549,7 @@ describe("status / bridge / registration", () => {
 		registerModeTool(pi.api as never, { resolveBridge: async () => bridge });
 		const tool = pi.modeTool();
 
-		const off = parseEnvelope<{ ok: boolean; tool: string; op: string; plan: boolean; vibe: boolean; goal: string; message: string }>(
+		const off = parseEnvelope<{ ok: boolean; tool: string; op: string; plan: boolean; vibe: boolean; goal: string; message: string; planPaused: boolean }>(
 			await tool.execute("c", { op: "status" }),
 		);
 		expect(off.ok).toBe(true);
@@ -467,17 +558,30 @@ describe("status / bridge / registration", () => {
 		expect(off.plan).toBe(false);
 		expect(off.vibe).toBe(false);
 		expect(off.goal).toBe("none");
+		expect(off.planPaused).toBe(false);
 		expect(off.message).toBe("plan: off | vibe: off | goal: none");
 
 		fake.state.plan = { enabled: true };
 		fake.state.goal = { enabled: true, goal: { status: "active" } };
-		const on = parseEnvelope<{ plan: boolean; vibe: boolean; goal: string; message: string }>(
+		const on = parseEnvelope<{ plan: boolean; vibe: boolean; goal: string; message: string; planPaused: boolean }>(
 			await tool.execute("c", { op: "status" }),
 		);
 		expect(on.plan).toBe(true);
 		expect(on.vibe).toBe(false);
 		expect(on.goal).toBe("active");
+		expect(on.planPaused).toBe(false);
 		expect(on.message).toBe("plan: on | vibe: off | goal: active");
+
+		fake.state.plan = undefined;
+		fake.state.goal = { enabled: false, goal: { status: "paused" } };
+		fake.state.journal.push({ type: "mode_change", mode: "plan_paused" });
+		const paused = parseEnvelope<{ plan: boolean; vibe: boolean; goal: string; message: string; planPaused: boolean }>(
+			await tool.execute("c", { op: "status" }),
+		);
+		expect(paused.plan).toBe(false);
+		expect(paused.planPaused).toBe(true);
+		expect(paused.goal).toBe("paused");
+		expect(paused.message).toBe("plan: paused | vibe: off | goal: paused");
 	});
 
 	test("N9: no bridge -> honest unavailability, nothing emulated", async () => {

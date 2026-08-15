@@ -8,6 +8,7 @@ import {
 	NATIVE_UNAVAILABLE_MESSAGE,
 	registerGoalTool,
 } from "../src/goal-tool";
+import type { HostBridge, LiveHostSession } from "../src/lib/host-bridge";
 import factory from "../src/main";
 
 // =============================================================================
@@ -125,6 +126,19 @@ function makePiMock() {
 	};
 }
 
+/** Unit tests that are not about plan/vibe occupancy must not hit a live registry. */
+function registerIsolated(api: ReturnType<typeof makePiMock>["api"]): void {
+	registerGoalTool(api as never, { resolveBridge: async () => null });
+}
+
+function makeOccupancyBridge(session: Partial<LiveHostSession>): HostBridge {
+	return {
+		session: session as LiveHostSession,
+		vibeRegistry: null,
+		vibeRegistryTrusted: false,
+	};
+}
+
 function getGoalTool(pi: ReturnType<typeof makePiMock>) {
 	const entry = pi.tools.find(t => t.definition.name === GOAL_TOOL_NAME);
 	if (!entry) throw new Error("goal tool not registered");
@@ -157,7 +171,7 @@ function parseEnvelope<T = Record<string, unknown>>(result: { content: Array<{ t
 describe("delegation contract", () => {
 	test("A1: create forwards params verbatim and wraps the native result in the envelope", async () => {
 		const pi = makePiMock();
-		registerGoalTool(pi.api as never);
+		registerIsolated(pi.api);
 		const tool = getGoalTool(pi);
 		const native = new NativeGoalMock();
 		const params = { op: "create", objective: "Ship QOL-001", token_budget: 50000 };
@@ -189,7 +203,7 @@ describe("delegation contract", () => {
 
 	test("A2: get/complete/resume/drop each forward their exact params", async () => {
 		const pi = makePiMock();
-		registerGoalTool(pi.api as never);
+		registerIsolated(pi.api);
 		const tool = getGoalTool(pi);
 		const native = new NativeGoalMock();
 		await native.invoke({ op: "create", objective: "seed" });
@@ -203,7 +217,7 @@ describe("delegation contract", () => {
 
 	test("A3: native goal record in the envelope's details is preserved exactly", async () => {
 		const pi = makePiMock();
-		registerGoalTool(pi.api as never);
+		registerIsolated(pi.api);
 		const tool = getGoalTool(pi);
 		const native = new NativeGoalMock();
 		const created = await native.invoke({ op: "create", objective: "verify", token_budget: 100 });
@@ -223,7 +237,7 @@ describe("delegation contract", () => {
 describe("error surfacing", () => {
 	test("B1: missing invokeTool -> actionable error envelope, no throw", async () => {
 		const pi = makePiMock();
-		registerGoalTool(pi.api as never);
+		registerIsolated(pi.api);
 		const tool = getGoalTool(pi);
 		const result = await tool.execute("call-x", { op: "get" }, undefined, undefined, {});
 		expect(result.isError).toBe(true);
@@ -237,7 +251,7 @@ describe("error surfacing", () => {
 
 	test("B2: native state error surfaces with native message", async () => {
 		const pi = makePiMock();
-		registerGoalTool(pi.api as never);
+		registerIsolated(pi.api);
 		const tool = getGoalTool(pi);
 		const native = new NativeGoalMock();
 		await native.invoke({ op: "create", objective: "first" });
@@ -254,7 +268,7 @@ describe("error surfacing", () => {
 
 	test("B3: create without objective surfaces native validation error", async () => {
 		const pi = makePiMock();
-		registerGoalTool(pi.api as never);
+		registerIsolated(pi.api);
 		const tool = getGoalTool(pi);
 		const native = new NativeGoalMock();
 		const result = await tool.execute("call-3", { op: "create" }, undefined, undefined, {
@@ -267,7 +281,7 @@ describe("error surfacing", () => {
 
 	test("B4: pre-aborted signal cancels without delegating", async () => {
 		const pi = makePiMock();
-		registerGoalTool(pi.api as never);
+		registerIsolated(pi.api);
 		const tool = getGoalTool(pi);
 		const native = new NativeGoalMock();
 		const controller = new AbortController();
@@ -290,7 +304,7 @@ describe("error surfacing", () => {
 describe("schema", () => {
 	test("C1: unknown op rejected by the parameter schema", () => {
 		const pi = makePiMock();
-		registerGoalTool(pi.api as never);
+		registerIsolated(pi.api);
 		const tool = getGoalTool(pi);
 		expect(() => tool.parameters.parse({ op: "pause" })).toThrow();
 		expect(tool.parameters.parse({ op: "get" })).toEqual({ op: "get" });
@@ -298,7 +312,7 @@ describe("schema", () => {
 
 	test("C2: token_budget must be a positive integer", () => {
 		const pi = makePiMock();
-		registerGoalTool(pi.api as never);
+		registerIsolated(pi.api);
 		const tool = getGoalTool(pi);
 		expect(() => tool.parameters.parse({ op: "create", objective: "x", token_budget: -5 })).toThrow();
 		expect(() => tool.parameters.parse({ op: "create", objective: "x", token_budget: 1.5 })).toThrow();
@@ -314,10 +328,107 @@ describe("schema", () => {
 // D. Registration shape + kill switch (via real factory + isolated lockfile)
 // =============================================================================
 
+describe("user-side occupancy (plan/vibe block create/resume)", () => {
+	test("E1: plan enabled refuses create and does not delegate", async () => {
+		const pi = makePiMock();
+		registerGoalTool(pi.api as never, {
+			resolveBridge: async () =>
+				makeOccupancyBridge({
+					getPlanModeState: () => ({ enabled: true }),
+					getVibeModeState: () => undefined,
+					getGoalModeState: () => undefined,
+				}),
+		});
+		const tool = getGoalTool(pi);
+		const native = new NativeGoalMock();
+		const result = await tool.execute(
+			"call-e1",
+			{ op: "create", objective: "should not start" },
+			undefined,
+			undefined,
+			{ invokeTool: p => native.invoke(p) },
+		);
+		expect(result.isError).toBe(true);
+		expect(result.content[0].text).toContain("Plan mode is active");
+		expect(result.content[0].text).toContain("does not free the slot");
+		expect(native.calls.length).toBe(0);
+	});
+
+	test("E2: vibe enabled refuses create", async () => {
+		const pi = makePiMock();
+		registerGoalTool(pi.api as never, {
+			resolveBridge: async () =>
+				makeOccupancyBridge({
+					getPlanModeState: () => undefined,
+					getVibeModeState: () => ({ enabled: true }),
+					getGoalModeState: () => undefined,
+				}),
+		});
+		const tool = getGoalTool(pi);
+		const native = new NativeGoalMock();
+		const result = await tool.execute(
+			"call-e2",
+			{ op: "create", objective: "should not start" },
+			undefined,
+			undefined,
+			{ invokeTool: p => native.invoke(p) },
+		);
+		expect(result.isError).toBe(true);
+		expect(result.content[0].text).toContain("Vibe mode is active");
+		expect(native.calls.length).toBe(0);
+	});
+
+	test("E3: journal plan_paused refuses resume", async () => {
+		const pi = makePiMock();
+		registerGoalTool(pi.api as never, {
+			resolveBridge: async () =>
+				makeOccupancyBridge({
+					getPlanModeState: () => undefined,
+					getVibeModeState: () => undefined,
+					getGoalModeState: () => undefined,
+					sessionManager: {
+						getSessionId: () => "s",
+						getSessionFile: () => null,
+						appendModeChange: () => {},
+						buildSessionContext: () => ({ mode: "plan_paused" }),
+					},
+				}),
+		});
+		const tool = getGoalTool(pi);
+		const native = new NativeGoalMock();
+		await native.invoke({ op: "create", objective: "paused later" });
+		native.calls.length = 0;
+		const result = await tool.execute("call-e3", { op: "resume" }, undefined, undefined, {
+			invokeTool: p => native.invoke(p),
+		});
+		expect(result.isError).toBe(true);
+		expect(result.content[0].text).toContain("Plan mode is paused");
+		expect(native.calls.length).toBe(0);
+	});
+
+	test("E4: get is not blocked by plan/vibe", async () => {
+		const pi = makePiMock();
+		registerGoalTool(pi.api as never, {
+			resolveBridge: async () =>
+				makeOccupancyBridge({
+					getPlanModeState: () => ({ enabled: true }),
+					getVibeModeState: () => ({ enabled: true }),
+				}),
+		});
+		const tool = getGoalTool(pi);
+		const native = new NativeGoalMock();
+		const result = await tool.execute("call-e4", { op: "get" }, undefined, undefined, {
+			invokeTool: p => native.invoke(p),
+		});
+		expect(result.isError).toBeUndefined();
+		expect(native.calls).toEqual([{ op: "get" }]);
+	});
+});
+
 describe("registration", () => {
 	test("D1: registers exactly one 'goal' tool with read-tier approval and essential loadMode", () => {
 		const pi = makePiMock();
-		registerGoalTool(pi.api as never);
+		registerIsolated(pi.api);
 		const goalTools = pi.tools.filter(t => t.definition.name === GOAL_TOOL_NAME);
 		expect(goalTools.length).toBe(1);
 		expect(goalTools[0].definition.approval).toBe("read");
