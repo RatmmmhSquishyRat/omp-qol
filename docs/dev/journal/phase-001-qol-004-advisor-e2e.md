@@ -24,3 +24,9 @@ Run delivery-form e2e in an isolated scratch git repo (not `test-workspace`, not
 - 6/6 `advisor` `tool_execution_end` frames, `isError=false`
 - upsert/remove `source` = scratch `WATCHDOG.yml`
 - first cursor-nano attempt was not a use-through (`not_found`, zero tool calls)
+
+Review rerun (`078f686`, same day): fresh install-plugin → L4 PASS → L6
+6/6 PASS with full untruncated evidence; `remove` verified to resurface
+user-scope `default` (`activeCount: 1`). Full suite corrected to 87 pass
+(the earlier "85/47" was miscounted); flaky H1 given an explicit 30s
+timeout; harness matchers tightened (upsert requires persisted+applied).

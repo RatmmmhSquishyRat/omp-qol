@@ -1,7 +1,7 @@
 # Session 001: QOL-004 advisor docs
 
 **date**: 2026-08-15
-**commits**: `dda148b`, `475dfbd`, `49ea863`
+**commits**: `dda148b`, `475dfbd`, `49ea863`, `078f686`
 
 ## Turn 1
 
@@ -134,4 +134,6 @@
 - `bun run typecheck` 环境性不可用：267 个 tsc 错误全部来自宿主 `.md` 字符串导入，插件 `src/`+`test/` 零类型错误；已记录于 impl-notes。
 - impl-notes 新增 Decision 7：结构化 JSON 信封（`op` 字段）是对设计 ApplyResult 的严格超集扩展，显式浮出，不改设计原文、不碰 pillar。
 - 诚实范围声明写入 impl-notes：L6 仅覆盖 6/10 ops（get/set_shared/apply/dump 为 L1+L3 覆盖，TDD 本就定 L6 为可选门）。
+
+**commit**: `078f686`
 
