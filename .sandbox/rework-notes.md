@@ -294,3 +294,123 @@ Per-file spot checks (goal 12/12, mode 22/22, advisor L1 55/55) green.
   into one custom message or steer them separately; the test accepts both.
 - The advisor `status` op includes `statusLine` (host `formatAdvisorStatus()`)
   verbatim; Phase 2 should not regex-pin its wording (host-owned).
+
+---
+
+# Phase 2 / L6 — multi-advisor real-traffic acceptance (2026-08-15)
+
+**Verdict: PASS** (first full run, exit 0). All 9 CRUD lifecycle steps green
+under the `{ok, tool, op, …}` envelope, and both live advisors independently
+proved Built → Fed → Streamed with a paused control staying silent.
+
+## Run facts
+
+- Harness: `.sandbox/e2e-workspace-advisor.ts` (fully rewritten; sections
+  CRUD + LIVE, one spawned installed-omp process and one throwaway git
+  workspace per section).
+- Artifact dir (committed, minus the two >1 MB raw frame logs):
+  `.sandbox/e2e-artifacts/run-20260815-164307/` — see its `EVIDENCE.md`
+  index. `frames-crud.jsonl` (1.65 MB) and `frames-live.jsonl` (1.84 MB)
+  exist only in the working tree, excluded from the commit by size policy.
+- Work commit: `91f670b` "test: land L6 multi-advisor real-traffic e2e with
+  isolated-root evidence" (this note itself rides the follow-up docs commit).
+- Timings: CRUD 68 s · LIVE 96 s · whole run ≈ 182 s (well under the
+  720 s/phase deadline).
+
+## Config-root isolation (NO fallback needed)
+
+- Spawned omp ran with `PI_CONFIG_DIR=.omp-qol-e2e-<runId>` (host resolves
+  the value relative to homedir — same mechanism the unit-test preload
+  uses). 401 models resolved inside the isolated root on the first probe.
+- Copied from `~/.omp/agent` (credential/model-registry material ONLY):
+  `agent.db(+wal/shm)`, `models.db(+wal/shm)`, `models.yml`, `.env`,
+  `kimi-device-id`. NEVER copied: user `config.yml`, `WATCHDOG.*`,
+  sessions, history, extensions, memories (asserted by
+  `isolation-manifest.json`).
+- Scratch `agent/config.yml` written instead: `setupVersion: 1`,
+  `advisor.syncBacklog: "1"`, and `modelRoles.advisor:
+  omp-qol-e2e-blocked/no-such-model`. The advisor-role pin matters: with the
+  role UNSET, the host's implicit default advisor falls back to the "slow"
+  priority chain (a strong, expensive model). CRUD step 2 (enable on an
+  empty roster) asserts exactly this neutralization: `running===false` +
+  `no_model:` warning.
+- The isolated root is deleted on success; scratch workspaces are swept at
+  the next run's start (leave-behind for inspection on failure).
+
+## Models used
+
+- Primary (both phases): `zai/glm-4.5-air`.
+- Alpha: `zai/glm-4.5-air` · Beta: `deepseek/deepseek-v4-flash` (distinct
+  providers chosen automatically from the host's `get_available_models`
+  listing; cursor/* and gpt-5.4-nano excluded per prior 404 evidence).
+- Gamma (paused control, `enabled: false`) pins `zai/glm-4.5-air` but never
+  ran.
+
+## Per-advisor deltas (baseline → post-turn, from op=status JSONs)
+
+| advisor | baseline | post-turn | gates |
+|---|---|---|---|
+| Alpha | user 0 · assistant 0 · tokens 0 · $0 | user 5 · assistant 6 · tokens 28 097 · $0.003796 | assistant ≥ 1 ✓ · tokens > 0 ✓ · still "running" ✓ |
+| Beta | user 0 · assistant 0 · tokens 0 · $0 | user 5 · assistant 3 · tokens 11 442 · $0.000623 | assistant ≥ 1 ✓ · tokens > 0 ✓ · still "running" ✓ |
+| Gamma | all-zero, "paused" | all-zero, "paused" | zero tokens ✓ · zero messages ✓ · no transcript file ✓ |
+
+- `op=dump` history mentions both Alpha and Beta (`dump.json`).
+- On-disk transcripts: `__advisor.alpha.jsonl` + `__advisor.beta.jsonl`
+  exist with assistant records (copies committed as
+  `advisor-transcript.{alpha,beta}.jsonl`); NO `__advisor.gamma.jsonl`.
+- `user=5` per advisor: advisors are fed every completed primary turn after
+  enable (T4's own turn end, the PING turn, and the settle-poll turns —
+  plus per-turn context records), not just the PING. The acceptance gates
+  are deltas ≥ thresholds, which this comfortably satisfies; the PING turn
+  itself is the only "real work" turn.
+
+## Baseline-hygiene mechanism (why the zero baseline is trustworthy)
+
+`enable` and `status` are requested in ONE primary turn (single message,
+two tool calls). Advisors only receive a turn AFTER it ends
+(`onPrimaryTurnEnd`), so the in-turn `status` reads genuinely zero counters.
+The harness carries a repair path (apply+status re-baseline, recorded as
+`baselineRepaired`) for the case where the model splits the combo across
+turns — NOT needed this run (`baselineRepaired: false`, no re-pins).
+
+## CRUD lifecycle (scripted, envelope-asserted) — 9/9
+
+status(disabled quiet) → enable(empty roster: no_model + no-runtime
+warnings, running===false) → upsert(Watchful: verification.enabled===true,
+effectiveAt==="session") → list(file+effective rosters) → remove(implicit
+default resurfaces as `{name:"default", implicit:true}`) → status(running
+default suppressed… asserted enabled+active with the neutralized role
+keeping it at no_model) → upsert(implicit default materialization warning)
+→ remove → disable(enabled===false). Every mutate's `envelope.source` is
+asserted to live INSIDE the scratch workspace (production WATCHDOG.yml
+safety canary; the repo-root file's mtime predates the run).
+
+## Product issues found
+
+- **None.** No product code was touched in Phase 2. The one candidate
+  anomaly (advisor `user` message count > number of primary turns) is
+  documented feed semantics (context records), not a defect.
+
+## Harness fixes (all harness-side, none product-side)
+
+- Assertions rewritten from OLD pre-envelope regex shapes to the unified
+  envelope (`crud-step-*.json` show the exact asserted payloads).
+- Plugin install now goes under `<ws>/<PI_CONFIG_DIR value>/plugins/…`
+  (project-registry discovery follows `getConfigDirName()`, not a
+  hardcoded `.omp`), and copies the CURRENT plugin source per run into a
+  timestamped scratch cache — no stale-cache risk.
+- Frame pump, per-turn tool capture, transient-error primary rotation
+  (`glm-4.5-air` was healthy; no rotation fired), spawned-process registry
+  killed even on deadline breach, `OMPQOL_E2E_SKIP_*` debug flags force an
+  INCONCLUSIVE verdict (never a fake pass).
+
+## For Phase 3 (docs)
+
+- The committed evidence set under
+  `.sandbox/e2e-artifacts/run-20260815-164307/` is the user-facing proof of
+  the L6 acceptance line: `EVIDENCE.md` is the index; `status-baseline.json`
+  / `status-post-1.json` carry the exact LiveAdvisorStat shapes documented
+  in §3 of this file.
+- Exit-code contract of the harness: 0 pass · 1 fail · 2 harness error ·
+  3 inconclusive; INCONCLUSIVE is used for missing credentials/quota or
+  provider outage — it never claims pass.
