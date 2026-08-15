@@ -38,7 +38,7 @@ Scratch HOME: `C:\Users\15480\AppData\Local\Temp\omp-qol-dist-verify-20260815-18
 
 ## Remaining human step
 
-仓库密钥 `NPM_TOKEN` 已按默认名写入。第一发 tag 是 `v0.3.1`（`v0.3.0` 指向无 `.github/` 的 `5392aef`，不复用）。
+仓库密钥 `NPM_TOKEN` 已按默认名写入。第一发 tag 是 `v0.3.1`（`v0.3.0` 指向无 `.github/` 的 `5392aef`，不复用）。Actions publish 在 provenance 之后 403：密钥需为带 bypass 2FA 的 granular access token，或包上配置 trusted publisher 后再 `workflow_dispatch` 重跑 Release。
 
 ## Host-doc vs code tensions (carried)
 

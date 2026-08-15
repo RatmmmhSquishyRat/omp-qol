@@ -11,8 +11,12 @@ omp plugin install omp-qol-plugin
 `omp install omp-qol-plugin` is the same command. Settings, list, and
 uninstall all use the package name `omp-qol-plugin`.
 
-The first public version is `0.3.1` (`v0.3.1`). Do not reuse `v0.3.0`:
-that tag points at a commit with no workflows.
+The first publish tag is `v0.3.1`. Do not reuse `v0.3.0`: that tag
+points at a commit with no workflows. The first Actions publish got
+as far as Sigstore provenance, then npm returned 403 (automation
+token must be a granular access token with bypass 2FA, or the
+package must have a trusted publisher). Re-run the Release workflow
+on `v0.3.1` after that is in place.
 
 `--scope project` is marketplace-only in omp 17.3.4. Passing it with this
 npm spec prints a warning and still writes `~/.omp/plugins`.

@@ -460,7 +460,9 @@
 - 只补对照表缺口：Release 权限收紧、`--provenance`、Release `needs` npm、tag env-pass、timeout、Release concurrency、`workflow_dispatch`、版本 `0.3.1`。不 SHA-pin、不加 Windows 矩阵、不抽 reusable workflow。
 - `NPM_TOKEN` 经管道写入仓库密钥（只确认名字存在）。`v0.3.0` 仍指向无 `.github/` 的 `5392aef`，不 force-move。
 - `bun test` 118/118；typecheck 0；`npm pack --dry-run` 10 文件（src + README + LICENSE + package.json，无 test / 无密钥）。
+- 推 `origin/master` 与 tag `v0.3.1`（剥注 `e83593a`）。删除 `tmp_token.txt`。CI run `31881374798` 绿。
+- Release `https://github.com/RatmmmhSquishyRat/omp-qol/actions/runs/31881407773`：verify 绿；publish 403（GAT + bypass 2FA / trusted publisher）；GitHub Release 正确跳过。未本机 `npm publish`。未改 token 显示、未 force-move tag。
 
-**commit**: `dc23362`（work：Release 对齐默认实践 / `0.3.1`）、`7e08078`（docs 映射）
+**commit**: `dc23362`（work：Release 对齐默认实践 / `0.3.1`）、`7e08078`（docs 映射）、`e83593a`（hash 回填）
 
 

@@ -18,3 +18,5 @@
 ## Verification
 
 `bun test` 118/118；plugin typecheck 0；`npm pack --dry-run` 10 文件、无 test / 无密钥；`gh secret list` 可见 `NPM_TOKEN`（只记名字）。本机不 `npm publish`。
+
+Release run `31881407773`（tag `v0.3.1`）：verify 绿；`npm publish --provenance --access public` 已写出 Sigstore provenance（logIndex `2475389192`），随后 registry PUT 403「Two-factor authentication or granular access token with bypass 2fa enabled is required」。GitHub Release 因 `needs: [verify, npm-publish]` 正确跳过。这不是 YAML 作业图错误；密钥需要 GAT + bypass 2FA，或包上先挂 trusted publisher。之后用 `workflow_dispatch` 在同一 tag 重跑，不要 force-move `v0.3.1`。
