@@ -3,6 +3,11 @@
 Date: 2026-08-06 · 目的:让 omp-qol 插件能从项目内的测试文件夹随 `omp` 启动
 自动启用,不改动用户全局 `~/.omp`。
 
+> **更正 (2026-08-15)**：仓内测试/验收的默认安装已改为隔离根上的
+> `omp plugin install omp-qol-plugin`。本文记录的是宿主 project-scope
+> 市场机制与旧 sandbox 拷贝器，不再是测试默认路径。live `test-workspace/.omp`
+> 在会话结束前不要热换。现行规程：`docs/plans/designs/qol-npm-install-in-tests.md`。
+
 > **补记(2026-08-07 仓库重整)**:正文为插件名 `omp-qol-extension`、源码位于
 > `repos/omp-qol-extension` 时期的历史记录。现状:插件正名
 > **`omp-qol-plugin`**(v0.3.0,完整插件语义),源码位于仓库根 **`plugin/`**,

@@ -4,6 +4,12 @@
 与 `qol-002-003-mode-tool-tests.md`(用例级 TDD)互补:后者是单元用例清单,
 本文是分层金字塔与运行规程。
 
+> **更正 (2026-08-15)**：默认测试/验收安装改为隔离根上的
+> `omp plugin install omp-qol-plugin`。下文 §4 / §8 / §9 里
+> `install-plugin.ts` 无参拷贝、`omp-qol-plugin@local (project)` 是历史规程。
+> 复现以本条与现在的 `.sandbox/install-plugin.ts` 为准。活着的
+> `test-workspace/.omp` 本轮不重装。
+
 ## 0. 测试对象与质量目标
 
 交付物 = omp-qol-plugin(goal 工具 + mode 薄驱动)。质量目标按用户原则:
@@ -81,7 +87,9 @@ I7 是"入口接到宿主机体"的因果证明:写保护是宿主代码,只读�
 
 ## 5. L4 活体接线(.sandbox/verify-workspace.ts)
 
-> 2026-08-07 起统一走交付形态(cwd=test-workspace,项目级插件,不动全局根);
+> 2026-08-15 起 L4 走隔离根上的官方 npm 安装（`verify-workspace.ts --isolated-root`），
+> 不再默认 cwd=`test-workspace`、也不再断言项目侧 `@local`。
+> 2026-08-07 到更正前：cwd=test-workspace,项目级插件,不动全局根。
 > 早期隔离根版本 `verify-live.ts` 已删除。
 
 RPC 模式启动真实宿主,`get_state` → `dumpTools`,断言:
@@ -140,10 +148,10 @@ RPC 模式启动真实宿主,`get_state` → `dumpTools`,断言:
 3. E2E 的 provider 依赖外部网关可用性;离线时 L1–L4 完整覆盖交付质量。
    注:用户默认模型可能配额耗尽(usage_limit_reached),L6 脚本会自动
    切换到 `OMPQOL_RELAY_PROVIDERS` 指定中转池的最廉价模型。
-4. 插件可见性有两条独立通路:运行时加载(`getEnabledPlugins`)与
-   UI 列表(`installed_plugins.json`,喂 `/plugins` 面板与 `omp plugin list`)。
-   交付形态两者均写入并经 `registry-probe.ts`(宿主自身函数)双面断言;
-   机制与源码证据见 omp-project-scoped-plugins.md §5.4。
+4. 官方 npm 安装的可见面是 `omp plugin list` 的 npm 段（`omp-qol-plugin@<ver>`）。
+   `registry-probe.ts` 对隔离根跑 `omp plugin list --json`。项目侧
+   `installed_plugins.json` / `@local` 是旧拷贝器的历史通路，见
+   `omp-project-scoped-plugins.md`（已加更正条）。
 
 ## 9. 复现命令一览
 
@@ -154,16 +162,15 @@ bun run test                                  # L1+L2+L3,49 例(含 T1–T6 密�
 
 cd ..
 bun .sandbox/link-dev-deps.ts                 # 开发依赖:monorepo 包 junction 进 plugin/node_modules(仅 bun test 需要)
-bun .sandbox/install-plugin.ts                # 安装/刷新交付形态(幂等,零全局写入)
-bun .sandbox/registry-probe.ts                # 双面断言:runtime + UI 注册表(project scope)
-bun .sandbox/verify-workspace.ts              # 交付形态接线(cwd=test-workspace,不动全局根)
-bun .sandbox/verify-workspace.ts --control    # 安装宿主+对照(--no-extensions)
-bun .sandbox/verify-workspace.ts --source     # 源码宿主+插件
-bun .sandbox/verify-workspace.ts --source --control  # 源码宿主+对照
-bun .sandbox/e2e-workspace-mode.ts            # L6:安装版 omp + test-workspace,真实 LLM 依次执行全部 5 个 op
-                                              # status→plan_enter→plan_exit→vibe_enter→vibe_exit→status
-                                              # 需 OMPQOL_RELAY_PROVIDERS=<provider 池,按优先级>（个人配置,不入仓库）
-
-cd test-workspace
-omp plugin list                               # UI 面实证:omp-qol-plugin@local (0.3.0) (project)
+bun .sandbox/install-plugin.ts --isolated-root .omp-qol-dev
+                                              # 官方: omp plugin install omp-qol-plugin（隔离 PI_CONFIG_DIR）
+bun .sandbox/registry-probe.ts --isolated-root .omp-qol-dev
+                                              # npm 段列出 omp-qol-plugin
+bun .sandbox/verify-workspace.ts --isolated-root .omp-qol-dev
+bun .sandbox/verify-workspace.ts --isolated-root .omp-qol-dev --control
+bun .sandbox/verify-workspace.ts --isolated-root .omp-qol-dev --source
+bun .sandbox/verify-workspace.ts --isolated-root .omp-qol-dev --source --control
+bun .sandbox/e2e-workspace-mode.ts            # L6:隔离官方安装 + scratch cwd,真实 LLM 全部 5 个 op
+                                              # 需 OMPQOL_RELAY_PROVIDERS=<provider 池>（个人配置,不入仓库）
+                                              # 不要对着活着的 test-workspace 跑
 ```

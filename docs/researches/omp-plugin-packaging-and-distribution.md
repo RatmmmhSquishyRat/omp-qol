@@ -17,6 +17,7 @@ Date: 2026-08-15 · 宿主实测 `omp/17.3.4` · 源码对照 `ref_repos/oh-my-p
 - `docs/researches/omp-plugin-packaging-and-distribution-2026-08-15-redo.md`
 - `docs/plans/routes/plugin-distribution-clarification-report.md`
 - `docs/plans/guides/plugin-distribution-implementor-guide.md`
+- `docs/plans/designs/qol-npm-install-in-tests.md`（测试/验收也走官方 npm 安装）
 
 ---
 

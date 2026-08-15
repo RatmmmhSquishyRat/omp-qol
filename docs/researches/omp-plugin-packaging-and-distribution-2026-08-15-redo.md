@@ -15,7 +15,7 @@ omp plugin install omp-qol@omp-qol
 
 作者的三条约束是：不要为了发这一个插件去维护 marketplace；不要把 npm 包和 project scope 绑成选路理由；不要把尚未提供的 npm token 当成通道否决条件。
 
-`.sandbox/install-plugin.ts` 仍是仓内开发/验收拷贝器，不是用户安装命令。
+`.sandbox/install-plugin.ts` 在 2026-08-15 已改成隔离根上的官方 `omp plugin install omp-qol-plugin` 薄包装（无隔离则拒绝）。未发布本地改动走 `--from-source`。不再把拷贝 `plugin/src` 当默认测试安装。
 
 ## 猜想
 
@@ -160,4 +160,4 @@ omp plugin install omp-qol-plugin
 
 发布：把 `plugin/` 发到 npm；GitHub Actions 在 `v*` tag 上跑 publish 作业。本轮不执行真实 publish。剩余人工步骤：配置 `NPM_TOKEN` 或 npm trusted publisher，然后打 tag。
 
-仓内开发/验收继续用 `.sandbox/install-plugin.ts`，并标明不是用户路径。
+仓内测试/验收与用户走同一条命令，但必须带隔离根：`bun .sandbox/install-plugin.ts --isolated-root .omp-qol-<id>`。详见 `docs/plans/designs/qol-npm-install-in-tests.md`。

@@ -356,3 +356,7 @@ Evidence gathered:
 - Probe (step 2, prior session) confirmed `applyAdvisorConfigs` is on the real `AgentSession`.
 
 The pillar `docs/ssot/pillars/self-managed-mode-switch/advisor-watchdog.md` has the phrase "特殊内置 subagent" which ADR-005 notes stands side-by-side with the code fact (advisor is a bypass observer, not a task target). **No amend made**: ADR-005 already documents the coexistence; there is no false claim to correct and no silently rewriting the pillar is warranted.
+
+## Amendment (2026-08-15): L4 / L6 install path
+
+L4 `verify-workspace` and L6 `e2e-workspace-advisor` no longer refresh a project-scoped copy under `test-workspace/.omp/plugins`. Default install for those harnesses is isolated `omp plugin install omp-qol-plugin`. Historical L4/L6 evidence above still describes the old copier; it is not silently rewritten. Live test-workspace was not reinstalled in this amendment.

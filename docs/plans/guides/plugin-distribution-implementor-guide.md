@@ -161,7 +161,7 @@ omp plugin install omp-qol-plugin --scope project --dry-run
 - Public interfaces: `package.json#name`、`omp.extensions`、`omp.settings`
 - Schema ownership: settings schema 在 `package.json`
 - In scope: 源码、测试、LICENSE、README 安装段
-- Out of scope: 仓内 sandbox 安装器逻辑（开发专用）
+- Out of scope: 隔离官方安装包装器（`.sandbox/install-plugin.ts`）
 - Allowed dependencies: peer `@oh-my-pi/pi-coding-agent`；dev bun/typescript/zod
 - Forbidden dependencies: 不要把宿主 `ref_repos` 写进 published `dependencies`
 
@@ -208,7 +208,7 @@ omp plugin install omp-qol-plugin --scope project --dry-run
 | README -> 宿主 CLI | API | `omp plugin install omp-qol-plugin` | `marketplace add` 当头条 | 命令失败即文档错 | 随 17.3.4 行为，宿主改分类器再改文档 |
 | plugin/package.json -> PluginManager | schema | `name` + `omp.extensions` | 根 package.json 冒充插件 | 装得上但加载跳过，或校验失败回滚 | semver；tag `v` + version |
 | release.yml -> npm | API | tag job + `NPM_TOKEN` / OIDC | push 自动 publish | job 红；GitHub Release 等 npm 成功 | 同一 version 不可重复 publish |
-| sandbox installer -> 用户 README | none | 标成 in-repo | 写成官方安装 | 验收污染作者 `~/.omp` | 不随 npm version 改机制 |
+| sandbox installer -> 用户 README | none | 隔离根上跑同一条官方命令 | 无隔离写入 `~/.omp` / test-workspace | 验收污染 live 根 | 不随 npm version 改机制 |
 | 已删除 catalog -> 宿主 MarketplaceManager | none | 不提交 | 再加回当默认通道 | 无 | n/a |
 
 ## 6. Key Config Atlas
@@ -306,7 +306,8 @@ omp plugin install omp-qol-plugin --scope project --dry-run
 | 插件测试 | `cd plugin && bun test` | 118+ pass |
 | 插件 tsc | `cd plugin && bun run typecheck` | exit 0 |
 | 元数据 | `bun .sandbox/check-distribution-metadata.ts` | PASS |
-| 开发安装 | `bun .sandbox/install-plugin.ts` | test-workspace 项目侧产物 |
+| 测试/验收安装 | `bun .sandbox/install-plugin.ts --isolated-root .omp-qol-<id>` | 隔离根执行 `omp plugin install omp-qol-plugin` |
+| 未发布本地树 | 同上加 `--from-source` | `omp plugin install <repo>/plugin`（opt-in） |
 
 ### File Placement Cheat Sheet
 
@@ -316,7 +317,7 @@ omp plugin install omp-qol-plugin --scope project --dry-run
 | npm 工作流 | `.github/workflows/release.yml` | push 工作流里 publish |
 | 用户安装说明 | 根 README 与 `plugin/README.md` 顶部 | 只写在 journal |
 | marketplace catalog | 不提交 | `.omp-plugin/marketplace.json` 当默认通道 |
-| 开发安装器 | `.sandbox/install-plugin.ts` | 用户 Quick start |
+| 隔离官方安装器 | `.sandbox/install-plugin.ts` | 用户 Quick start；无隔离参数的旧拷贝器 |
 | 支柱原文 | `docs/ssot/pillars/distribution-delivery/` | 改写用户原话 |
 
 ## 10. Task Packages and Acceptance Gates

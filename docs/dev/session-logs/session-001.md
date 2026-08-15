@@ -1,7 +1,7 @@
 # Session 001: QOL-004 advisor docs
 
 **date**: 2026-08-15
-**commits**: `dda148b`, `475dfbd`, `49ea863`, `078f686`, `643e513`, `336d0ab`, `8feb59a`, `91f670b`, `bb88788`, `2a47408`, `4f688a2`, `49532a7`, `ca4f512`, `c9af694`, `dc23362`, `7e08078`（`336d0ab` 起为 Turn 10–11 rework；`4f688a2`/`49532a7` 为 Turn 12 分发；`ca4f512`/`c9af694` 为 Turn 13 分发重做；`dc23362`/`7e08078` 为 Turn 14 默认 npm publish）
+**commits**: `dda148b`, `475dfbd`, `49ea863`, `078f686`, `643e513`, `336d0ab`, `8feb59a`, `91f670b`, `bb88788`, `2a47408`, `4f688a2`, `49532a7`, `ca4f512`, `c9af694`, `dc23362`, `7e08078`, `3325706`（`336d0ab` 起为 Turn 10–11 rework；`4f688a2`/`49532a7` 为 Turn 12 分发；`ca4f512`/`c9af694` 为 Turn 13 分发重做；`dc23362`/`7e08078` 为 Turn 14 默认 npm publish；`3325706` 为 Turn 16 测试改走官方安装）
 
 ## Turn 1
 
@@ -464,5 +464,73 @@
 - Release `https://github.com/RatmmmhSquishyRat/omp-qol/actions/runs/31881407773`：verify 绿；publish 403（GAT + bypass 2FA / trusted publisher）；GitHub Release 正确跳过。未本机 `npm publish`。未改 token 显示、未 force-move tag。
 
 **commit**: `dc23362`（work：Release 对齐默认实践 / `0.3.1`）、`7e08078`（docs 映射）、`e83593a`（hash 回填）
+
+## Turn 15
+
+### User
+
+> C:\Users\15480\Desktop\AIWorkshop\repos\omp-qol\tmpkey.txt
+
+### Agent Actions
+
+- 新密钥经 stdin 写入仓库 secret `NPM_TOKEN`（只确认名字存在）；删除 `tmpkey.txt`。
+- 重跑 tag 触发的 Release `31881407773`（ref 仍是 `v0.3.1`，不用 `workflow_dispatch` 打在 master 上）。
+- verify / npm publish / GitHub Release 全绿。`npm view omp-qol-plugin` → `0.3.1`。未把密钥写入仓库或对话。
+
+## Turn 16
+
+### User
+
+> You are the LEAD implementer for switching omp-qol's tests/workspaces/docs onto the official published install path. You MAY spawn internal subagents for parallel inventory, then you alone write files.
+>
+> Repo: C:\Users\15480\Desktop\AIWorkshop\repos\omp-qol (Windows, PowerShell — no heredoc; commits via temp file + `git commit -F`).
+>
+> ## Author (2026-08-15, VERBATIM — save as pillar clarification + session-001 new turn)
+>
+> > 已经上架正确安装方式, 就代表我们之后测试工作区也要使用这种方式.
+> > 你自己完整查看当前项目中的各种测试和工作区配置, 完整全量对于插件安装方式进行维护更新.
+> >
+> > 需要注意的是, 当前OMP不论是全局还是这个测试工作区, 都有任务在跑, 所以你必须要注意不能够扰乱当前进程, 仅修改相关文件, 干净严谨安全地执行这部分工作.
+>
+> Published fact: `omp-qol-plugin@0.3.1` is on npm. Official user command: `omp plugin install omp-qol-plugin`. Host `--scope project` is IGNORED for npm (installs to `~/.omp/plugins`). Do not resurrect the deleted in-repo marketplace catalog as the default.
+>
+> ## HARD SAFETY (process-alive)
+>
+> Global omp AND the test-workspace omp have live tasks. You must NOT:
+> - kill / stop / restart any omp process you did not spawn
+> - run `omp plugin install` / `upgrade` / `uninstall` against the real `~/.omp` or against `test-workspace` (those sessions are live and would reload/break)
+> - overwrite `test-workspace/.omp/plugins/**` cache/junction/lock while a session may be reading it
+> - touch repo-root `WATCHDOG.yml`
+> - `git init` test-workspace
+> - write secrets
+>
+> You MAY: edit scripts, docs, plans, e2e harness source, README. You MAY run read-only commands (`Get-Process`, `git`, `rg`, `type`). You MAY run official install ONLY inside a freshly created throwaway scratch dir with its own `PI_CONFIG_DIR` / isolated HOME if you need to prove the new script — then delete the scratch. Never point that at the live roots.
+>
+> ## What “use the official way in test workspaces” means
+>
+> - Default documented + scripted install for tests/e2e becomes `omp plugin install omp-qol-plugin` (npm), not `.sandbox/install-plugin.ts` copying `plugin/src` into a fake marketplace cache.
+> - Isolated e2e/scratch must set `PI_CONFIG_DIR` (or the host-equivalent config root) to the scratch so official install cannot land in the developer’s live `~/.omp`.
+> - `.sandbox/install-plugin.ts` is either rewritten as a thin wrapper around the official command (for isolated roots only) or clearly labeled obsolete and all callers retargeted. Do not leave two competing “default” install stories.
+> - Dev-from-source (unpublished local edits) may remain as an explicit opt-in, never the headline.
+> - Live test-workspace will pick up the new method on the *next intentional reinstall after sessions end* — document that operational red line; do not hot-swap its `.omp` now.
+>
+> ## Required workflow (you must actually do these)
+>
+> 1. Fan out internal read-only subagents (or parallel greps) across: `.sandbox/*`, `test-workspace/`, `plugin/test/`, `docs/`, `.github/`, READMEs. Inventory every install/copy/junction/lockfile mention.
+> 2. Write a short plan: `docs/plans/designs/qol-npm-install-in-tests.md` (or similar) + a journal phase + session-001 turn with the verbatim user text. Pillar: append clarification under `docs/ssot/pillars/distribution-delivery/user-installable-plugin.md` (quote unchanged).
+> 3. Implement file updates to close the loop: harnesses, installer script, README first-path, TDD/delivery docs, any check scripts that still assert the old cache/marketplace layout.
+> 4. Verify: `bun test` in plugin/ still green; if you have a throwaway isolated official-install smoke, record evidence under `.sandbox/` (not in live workspaces). Do not claim live test-workspace was reinstalled.
+> 5. Commit (work + docs-mapping) and push. Do not publish a new npm version unless package.json/install metadata must change for the scripts — prefer script/doc-only.
+
+### Agent Actions
+
+- 只读盘点 `.sandbox/`、docs、README、`plugin/test/`、`.github/`。活着的 `omp` pid 49744、65868 未杀、未重装。
+- 支柱第四条澄清原文写入 `user-installable-plugin.md`。计划 `docs/plans/designs/qol-npm-install-in-tests.md`。
+- `install-plugin.ts` 改为隔离根上的 `omp plugin install omp-qol-plugin`；无隔离则退出。`--from-source` 为 opt-in。
+- `registry-probe` / `verify-workspace` / 两条 e2e 改走隔离官方安装；不再写 `test-workspace/.omp`。
+- 未碰根 `WATCHDOG.yml`、未 `git init` test-workspace、未对 live `~/.omp` 跑 install。
+- `bun test` 120/120。无隔离的 `install-plugin.ts` 退出 2。隔离 HOME 官方安装写出 `omp-qol-plugin@0.3.1`；L4 verify PASS。作者 `~/.omp/plugins/package.json` 仍不存在；`test-workspace/.omp/plugins` mtime 未变。活 `omp` pid 49744 / 65868 仍在。scratch 已删。未重装 live test-workspace。
+
+**commit**: `3325706`（work：隔离官方安装）
 
 

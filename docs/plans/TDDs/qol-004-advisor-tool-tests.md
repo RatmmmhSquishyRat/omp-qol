@@ -26,9 +26,10 @@ product ban on `scope=user`. Every QOL-004 test:
 - uses a temporary `agentDir` / project dir for all `WATCHDOG.yml` writes;
 - never writes the developer's real `~/.omp` or real user-agent WATCHDOG.
 
-L4 `verify-workspace` keeps the existing project-scoped plugin path
-(cwd=`test-workspace`, no global marketplace write). Advisor user-scope
-L3 cases still use the temp `agentDir`, not the developer home.
+L4 `verify-workspace` uses an isolated official npm install
+(`--isolated-root .omp-qol-*`, never live `~/.omp` or
+`test-workspace/.omp`). Advisor user-scope L3 cases still use the temp
+`agentDir`, not the developer home.
 
 ## Levels (this milestone)
 

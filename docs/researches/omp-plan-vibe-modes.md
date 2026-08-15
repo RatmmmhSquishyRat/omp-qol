@@ -299,6 +299,8 @@ marker so exit always mirrors the entry path).
 | live wiring | `verify-live.ts` (13 tools, mode/goal with [qol] marker, schema carries all 5 ops) + `--control` (11 tools, both absent) | PASS / PASS |
 | **delivery e2e (the gap)** | `.sandbox/e2e-workspace-mode.ts` extended to run ALL ops on the installed sealed host through real LLM turns: status → plan_enter → plan_exit → vibe_enter → vibe_exit → status | **PASS, 6/6 steps** |
 
+> 更正 (2026-08-15)：上表 reinstall / registry probe 行记录的是旧拷贝器。现行默认是隔离根上的 `omp plugin install omp-qol-plugin`。
+
 Captured frames from the sealed installed host (relay-pool model):
 
 ```

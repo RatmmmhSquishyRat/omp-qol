@@ -14,7 +14,7 @@
 3. README：头条 `omp plugin install omp-qol-plugin`；sandbox 标成 in-repo
 4. GitHub Actions：push/PR 测试不变；tag 上增加 npm publish 作业（本轮不执行真实 publish）
 5. 元数据检查不再对账 catalog
-6. 保留 `.sandbox/install-plugin.ts` 为开发/验收路径
+6. `.sandbox/install-plugin.ts` 改为隔离根上的官方 `omp plugin install omp-qol-plugin` 薄包装；无隔离则退出。未发布本地改动用 `--from-source`。不把拷贝/junction 当默认。详见 `qol-npm-install-in-tests.md`。
 
 ## 不改什么
 
