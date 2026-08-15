@@ -118,3 +118,20 @@
 
 **commit**: `49ea863`
 
+## Turn 6
+
+### User
+
+> 完整review上述agent的工作,看看是否真的完整完成
+
+### Agent Actions
+
+- 独立复核（不信报告只信复现）：远端同步 `3c9282b`、工作树干净、`docs/ssot/pillars/` 自 `86c412e` 起零改动、`~/.omp` 无 WATCHDOG.yml（e2e 中 user 级 `default` advisor 来自宿主自身配置，非本插件写入）、repo 根与 test-workspace 无 WATCHDOG 污染。
+- 发现并修正 Turn 2/5 记录的计数错误：全套测试实为 **87 pass（28 L1 + 10 L3 + 49 回归=12+22+8+7）**，此前"85/47"为算术错误；impl-notes 已订正。
+- 发现 `host-bridge.test.ts` H1 在高负载下 flaky（宿主自导入超 bun 默认 5s 单测超时，实测 6.36s 失败、复跑 1.6s 通过）：给 H1 加显式 30s 超时，断言未变。
+- 发现并修复 e2e harness 三个缺陷（全部朝更严方向）：模型中途切换后误重发 step 1 prompt（潜在假 FAIL）；证据打印 280 字符截断（此前 remove 的 `activeCount:1`/`default` 回浮属超出证据的推断）；upsert 断言未查 `persisted`/`applied`。另：401/403 正则加词边界、scratch 旧目录容错清理（绝不动非本脚本进程）。
+- 全新复跑：`bun run test` 87/87；`install-plugin` + L4 verify-workspace PASS（advisor 10-op schema）；L6 e2e **6/6 PASS**（`zai/glm-4.5-flash`），完整无截断证据确证 remove 后 user `default` 回浮 `activeCount:1`（F4 真机语义）、upsert `persisted+applied+E2EReviewer running`。
+- `bun run typecheck` 环境性不可用：267 个 tsc 错误全部来自宿主 `.md` 字符串导入，插件 `src/`+`test/` 零类型错误；已记录于 impl-notes。
+- impl-notes 新增 Decision 7：结构化 JSON 信封（`op` 字段）是对设计 ApplyResult 的严格超集扩展，显式浮出，不改设计原文、不碰 pillar。
+- 诚实范围声明写入 impl-notes：L6 仅覆盖 6/10 ops（get/set_shared/apply/dump 为 L1+L3 覆盖，TDD 本就定 L6 为可选门）。
+

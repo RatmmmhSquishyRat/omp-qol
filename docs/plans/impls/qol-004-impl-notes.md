@@ -52,6 +52,18 @@ Proven by L1 A4: `setAdvisorEnabled` is called, then the function returns. No `d
 
 `nativeGetProjectDir(cwd)` calls `repo.root(cwd)` which walks up to the git root. Even when `cwd` is a nested subdirectory, the edit path resolves to `<gitRoot>/WATCHDOG.yml`. L3 I8 verifies this with a real temp git repo.
 
+### 7. Structured JSON envelope with `op` on every op (post-e2e fix, 49ea863)
+
+The first L6 use-through showed `enable`/`disable` returning prose only, which
+was fragile for both the model and the assertions. All ops now return
+parseable JSON containing `op` (plus a one-line human summary where useful),
+and the same object is attached as the result `details`. **Design delta,
+surfaced here, not silently absorbed**: the design's ApplyResult block
+(`qol-004-advisor-tool-design.md` §Track B) and TDD A13 list the shape
+without an `op` field; the implementation adds `op` as a strict superset.
+Design §Track B "read ops return text plus structured details" is now
+literally satisfied. No pillar was touched.
+
 ---
 
 ## Test Results
@@ -60,8 +72,17 @@ Proven by L1 A4: `setAdvisorEnabled` is called, then the function returns. No `d
 |---|---|---|---|
 | L1 | `advisor-tool.test.ts` | 28 | 0 |
 | L3 | `advisor-integration.test.ts` | 10 | 0 |
-| Regression (L1+L3+bridge) | all pre-existing | 47 | 0 |
-| **Total** | | **85** | **0** |
+| Regression | `goal-tool` 12 + `mode-tool` 22 + `host-bridge` 8 + `integration-real-session` 7 | 49 | 0 |
+| **Total** | | **87** | **0** |
+
+> Correction (2026-08-15 review): the earlier version of this table claimed
+> "47 regression / 85 total" — that arithmetic was wrong. The verified run
+> is 12+22+8+7 = 49 regression, 87 total. `host-bridge` H1 was observed to
+> be flaky under load (host self-import can exceed bun's default 5s per-test
+> timeout); H1 now carries an explicit 30s timeout with an unchanged assertion.
+> `bun run typecheck` is not usable in the junction/tsconfig-paths setup:
+> all 267 tsc errors come from the host repo's `.md` string imports
+> (bun-loader feature); plugin `src/` + `test/` have zero type errors.
 
 ### Foundation gate coverage (F1–F7)
 
@@ -99,6 +120,36 @@ First-attempt gaps (so this is not silently rewritten as “always green”):
 - Cursor `gpt-5.4-nano-high` was a dead model (`not_found`); the turn ended with **zero** `advisor` calls. That is not a use-through.
 - An intermediate run called `enable` successfully (`Advisor enabled. … enabled=true active=true`) but the harness regex looked for JSON `"enabled": true` and falsely failed. The tool itself worked.
 - `remove` once matched against the outer stringified RPC frame (`\"persisted\": true`) and falsely failed; the tool had already persisted. Matcher now reads `result.content[].text`.
+
+### Review rerun (2026-08-15, post-49ea863)
+
+An independent review rerun (fresh `install-plugin` → L4 → L6) reproduced
+**6/6 PASS** on `zai/glm-4.5-flash` with the harness now printing the
+complete, untruncated text of every `tool_execution_end`. This closed two
+evidence gaps of the earlier report:
+- the earlier console truncated results at 280 chars, so `remove`'s
+  verification block was partially inferred; the full rerun evidence shows
+  `remove` → `activeCount: 1` with user-scope `default` (`kimi-code/k3`)
+  back in the live roster — F4 semantics observed live;
+- `upsert`'s live verification shows `E2EReviewer` running with the
+  advisor-role default model resolved (`kimi-code/k3`).
+
+Harness fixes made during review (all in the strict direction):
+- upsert step now requires `"persisted": true` and `"applied": true`, not
+  just the advisor name;
+- after a mid-run model switch the harness resumes at the CURRENT step
+  (previously it re-sent step 1's prompt while asserting the current
+  step's expectation — a latent false-FAIL bug);
+- transient-error regex uses word boundaries for 401/403 so token counts
+  like "4403" cannot trigger a spurious model switch;
+- old scratch dirs are cleaned up best-effort; processes not spawned by
+  the script are never touched.
+
+Honest scope statement: L6 drives 6 of 10 ops through a real LLM
+(`status`, `enable`, `upsert`, `list`, `remove`, `disable`). The other
+four (`get`, `set_shared`, `apply`, `dump`) are covered at L1+L3 only —
+consistent with the TDD, which gates this milestone on L1+L3+L4 and marks
+L6 as optional (Foundation F8).
 
 ---
 

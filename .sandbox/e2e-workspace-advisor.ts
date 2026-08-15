@@ -32,7 +32,18 @@ const version = sourcePkg.version;
 const MARKETPLACE_NAME = "local";
 const PLUGIN_ID = "omp-qol-plugin@local";
 
-await fs.rm(scratch, { recursive: true, force: true });
+// Best-effort cleanup of scratch dirs from previous runs. EBUSY (an omp
+// child from an interrupted run still holding the dir) is tolerated: we
+// never touch processes we did not spawn.
+const scratchParent = path.dirname(scratch);
+try {
+	for (const entry of await fs.readdir(scratchParent)) {
+		if (!entry.startsWith("e2e-advisor-ws")) continue;
+		await fs.rm(path.join(scratchParent, entry), { recursive: true, force: true }).catch(() => {});
+	}
+} catch {
+	/* scratch parent may not exist yet */
+}
 await fs.mkdir(scratch, { recursive: true });
 const gitInit = spawnSync("git", ["init"], { cwd: scratch, encoding: "utf8" });
 if (gitInit.status !== 0) {
@@ -93,7 +104,7 @@ const steps: Step[] = [
 	{
 		op: "upsert",
 		extra: ' name="E2EReviewer" instructions="Watch for regressions in this e2e session."',
-		expect: /"op": "upsert"[\s\S]*E2EReviewer/,
+		expect: /"op": "upsert"[\s\S]*"persisted": true[\s\S]*"applied": true[\s\S]*E2EReviewer/,
 	},
 	{ op: "list", extra: ' scope="effective"', expect: /"op": "list"[\s\S]*E2EReviewer/ },
 	{ op: "remove", extra: ' name="E2EReviewer"', expect: /"op": "remove"[\s\S]*"persisted": true/ },
@@ -185,7 +196,7 @@ function rankModels(models: Array<{ provider: string; id: string }>): Array<{ pr
 }
 
 function isTransientModelError(raw: string): boolean {
-	return /not_found|Connect error|usage_limit|rate.?limit|403|401|overloaded|unavailable/i.test(raw);
+	return /not_found|Connect error|usage_limit|rate.?limit|\b40[13]\b|overloaded|unavailable/i.test(raw);
 }
 
 while (true) {
@@ -229,7 +240,9 @@ while (true) {
 				if (!frame.success) fail(`set_model failed: ${JSON.stringify(frame.error)}`);
 				console.log(`[e2e-advisor] model: ${modelSet?.provider}/${modelSet?.modelId}`);
 				phase = "awaitTool";
-				sendStepPrompt(steps[0]);
+				// Resume at the CURRENT step (stepIndex > 0 after a mid-run
+				// model switch), not unconditionally at step 1.
+				sendStepPrompt(steps[stepIndex]);
 				continue;
 			}
 			continue;
@@ -301,6 +314,10 @@ if (verdict === undefined) {
 	console.log("[e2e-advisor] FAIL");
 	process.exit(1);
 }
-for (const c of captured) console.log(`[e2e-advisor] op ${c.op}: ${c.raw.slice(0, 280)}`);
+// Full, untruncated evidence: the complete text of every advisor tool result.
+for (const c of captured) {
+	console.log(`[e2e-advisor] ===== op ${c.op} (matched=${c.matched}) =====`);
+	console.log(c.raw);
+}
 console.log("[e2e-advisor] PASS");
 process.exit(0);

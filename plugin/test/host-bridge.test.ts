@@ -37,10 +37,13 @@ function completeSession(): Record<string, unknown> {
 }
 
 describe("resolveHostBridge edge cases", () => {
+	// H1 is the first test that triggers the bridge's host self-import; on a
+	// loaded machine that import alone can exceed bun's default 5s per-test
+	// timeout (observed 6.4s). The assertion is unchanged.
 	test("H1: no main-kind ref -> null", async () => {
 		register({ id: "qol-h1-sub", kind: "sub", session: completeSession() });
 		expect(await resolveHostBridge()).toBeNull();
-	});
+	}, 30_000);
 
 	test("H2: main ref with null session (parked) -> null", async () => {
 		register({ id: "qol-h2", session: null, status: "parked" });
