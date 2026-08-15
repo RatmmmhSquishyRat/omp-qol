@@ -11,7 +11,7 @@ omp plugin install omp-qol-plugin
 `omp install omp-qol-plugin` is the same command. Settings, list, and
 uninstall all use the package name `omp-qol-plugin`.
 
-The published package is `omp-qol-plugin@0.3.1`. Do not reuse tag
+The published package is `omp-qol-plugin@0.3.2`. Do not reuse tag
 `v0.3.0`: that tag points at a commit with no workflows.
 
 `--scope project` is marketplace-only in omp 17.3.4. Passing it with this

@@ -1,6 +1,6 @@
 {
   "name": "omp-qol-plugin",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Quality-of-life plugin for the omp (Oh My Pi) coding agent: agent goal tool + agent-controlled plan/vibe modes + agent-facing advisor (WATCHDOG) management",
   "type": "module",
   "license": "MIT",

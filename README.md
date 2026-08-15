@@ -10,7 +10,7 @@ Requires a working `omp` (this repo is verified against 17.3.4).
 omp plugin install omp-qol-plugin
 ```
 
-`omp install omp-qol-plugin` is the same command. Restart an already-open session (or `/reload-plugins` for skills; restart for tools/extensions). `omp plugin list` should show `omp-qol-plugin@<version>` under npm plugins. The published package is `omp-qol-plugin@0.3.1`.
+`omp install omp-qol-plugin` is the same command. Restart an already-open session (or `/reload-plugins` for skills; restart for tools/extensions). `omp plugin list` should show `omp-qol-plugin@<version>` under npm plugins. The published package is `omp-qol-plugin@0.3.2`.
 
 Upgrade:
 
