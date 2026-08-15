@@ -16,6 +16,11 @@
  *           on-disk __advisor.<slug>.jsonl transcripts for Alpha+Beta and
  *           none for Gamma.
  *
+ * Plugin install: `omp plugin install omp-qol-plugin` into the isolated
+ * PI_CONFIG_DIR (user-scope npm). Scratch workspaces are git-init only —
+ * no copy/junction/fake marketplace under the workspace. Official install
+ * is never pointed at live ~/.omp or test-workspace/.omp.
+ *
  * Config-root isolation: the spawned omp runs with PI_CONFIG_DIR pointing at
  * a scratch root under the user's home (the host resolves the value relative
  * to homedir). ONLY credential / model-registry material is copied from the
@@ -50,13 +55,17 @@
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { spawnSync } from "node:child_process";
+import {
+	gitInitScratch,
+	liveUserPluginPresent,
+	resolveIsolation,
+	runOfficialInstall,
+} from "./lib/official-install.ts";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Section 0 — run identity, paths, artifact store
 // ═══════════════════════════════════════════════════════════════════════════
 
-const repoRoot = path.resolve(import.meta.dir, "..");
 const runStamp = new Date();
 const runId =
 	`${runStamp.getFullYear()}${String(runStamp.getMonth() + 1).padStart(2, "0")}${String(runStamp.getDate()).padStart(2, "0")}` +
@@ -205,61 +214,23 @@ const FALLBACK_PROJECT_CONFIG = [
 ].join("\n");
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Section 2 — plugin install into a scratch workspace
+// Section 2 — scratch workspace (git only) + isolated official install
 // ═══════════════════════════════════════════════════════════════════════════
 
-const MARKETPLACE_NAME = "local";
-const PLUGIN_ID = "omp-qol-plugin@local";
-const pluginSource = path.join(repoRoot, "plugin");
+async function makeWorkspace(ws: string): Promise<void> {
+	await gitInitScratch(ws, "omp-qol e2e scratch — plugin comes from isolated official npm install\n");
+}
 
-async function makeWorkspace(ws: string, configDirName: string): Promise<void> {
-	await fs.mkdir(ws, { recursive: true });
-	const gitInit = spawnSync("git", ["init"], { cwd: ws, encoding: "utf8" });
-	if (gitInit.status !== 0) throw new Error(`git init failed in ${ws}: ${gitInit.stderr}`);
-
-	const sourcePkg = JSON.parse(await Bun.file(path.join(pluginSource, "package.json")).text()) as {
-		name: string;
-		version: string;
-	};
-	const packageName = sourcePkg.name;
-	const version = sourcePkg.version;
-
-	// The host resolves the PROJECT plugin registry by walking up from cwd
-	// looking for <dir>/<getConfigDirName()>/ — the name follows PI_CONFIG_DIR,
-	// so the install must live under the SAME directory name the spawned omp
-	// will use, not a hardcoded ".omp".
-	const pluginsRoot = path.join(ws, configDirName, "plugins");
-	const cachePath = path.join(pluginsRoot, "cache", MARKETPLACE_NAME, packageName, version);
-	await fs.mkdir(cachePath, { recursive: true });
-	await fs.copyFile(path.join(pluginSource, "package.json"), path.join(cachePath, "package.json"));
-	await fs.cp(path.join(pluginSource, "src"), path.join(cachePath, "src"), { recursive: true });
-
-	const linkPath = path.join(pluginsRoot, "node_modules", packageName);
-	await fs.mkdir(path.dirname(linkPath), { recursive: true });
-	await fs.symlink(cachePath, linkPath, process.platform === "win32" ? "junction" : "dir");
-
-	await Bun.write(
-		path.join(pluginsRoot, "omp-plugins.lock.json"),
-		`${JSON.stringify({ plugins: { [packageName]: { version, enabledFeatures: null, enabled: true } }, settings: {} }, null, 2)}\n`,
-	);
-	await Bun.write(
-		path.join(pluginsRoot, "package.json"),
-		`${JSON.stringify({ dependencies: { [packageName]: version } }, null, 2)}\n`,
-	);
-	const now = new Date().toISOString();
-	await Bun.write(
-		path.join(pluginsRoot, "installed_plugins.json"),
-		`${JSON.stringify(
-			{
-				version: 2,
-				plugins: {
-					[PLUGIN_ID]: [{ scope: "project", installPath: cachePath, version, installedAt: now, lastUpdated: now }],
-				},
-			},
-			null,
-			2,
-		)}\n`,
-	);
+function installPluginOfficialIsolated(): void {
+	const isolation = resolveIsolation({ isolatedRoot: isolatedRootName });
+	const result = runOfficialInstall(isolation);
+	if (result.stdout.trim()) log(result.stdout.trim());
+	if (result.stderr.trim()) log(result.stderr.trim());
+	if (result.status !== 0) {
+		throw new Error(`official install failed (${result.status}): omp plugin install ${result.spec}\n${result.stderr}`);
+	}
+	evidence.notes.push(`official install: omp plugin install ${result.spec} → ${isolation.pluginsDir}`);
+	log(`official install: omp plugin install ${result.spec} → ${isolation.pluginsDir}`);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1246,10 +1217,11 @@ async function main(): Promise<number> {
 	await sweepStaleIsolatedRoots();
 	await fs.mkdir(artifactDir, { recursive: true });
 
-	// -- isolated root + probe (with real-root fallback) --------------------
+	// -- isolated root + official npm install + probe (real-root fallback) --
 	let mode: "isolated" | "fallback-real-root" = "isolated";
 	await buildIsolatedRoot();
-	await makeWorkspace(wsCrud, isolatedRootName);
+	installPluginOfficialIsolated();
+	await makeWorkspace(wsCrud);
 	let models = await probeModels("isolated");
 	let primaryOk = rankPrimaryModels(models).length > 0;
 	let advisorsOk = rankAdvisorCandidates(models).length >= 2;
@@ -1258,8 +1230,17 @@ async function main(): Promise<number> {
 		log("isolated root cannot resolve enough models — falling back to the REAL config root with a project-scope neutralization overlay");
 		mode = "fallback-real-root";
 		evidence.configRootMode = mode;
+		if (!liveUserPluginPresent()) {
+			throw new Inconclusive(
+				"isolated credentials failed and live ~/.omp has no omp-qol-plugin; refusing official install into the live user root",
+			);
+		}
+		evidence.notes.push(
+			"fallback-real-root: did not run omp plugin install (live ~/.omp is in use); using the already-present user plugin",
+		);
 		await rmrf(wsCrud);
-		await makeWorkspace(wsCrud, ".omp");
+		await makeWorkspace(wsCrud);
+		await fs.mkdir(path.join(wsCrud, ".omp"), { recursive: true });
 		await Bun.write(path.join(wsCrud, ".omp", "config.yml"), FALLBACK_PROJECT_CONFIG);
 		models = await probeModels(mode);
 		primaryOk = rankPrimaryModels(models).length > 0;
@@ -1268,12 +1249,14 @@ async function main(): Promise<number> {
 			throw new Inconclusive("even the real config root resolves no usable models — credentials unavailable on this machine");
 		}
 	}
-	await makeWorkspace(wsLive, mode === "isolated" ? isolatedRootName : ".omp");
+	await makeWorkspace(wsLive);
 	if (mode === "fallback-real-root") {
+		await fs.mkdir(path.join(wsLive, ".omp"), { recursive: true });
 		await Bun.write(path.join(wsLive, ".omp", "config.yml"), FALLBACK_PROJECT_CONFIG);
 	}
 	await saveJsonArtifact("isolation-manifest.json", {
 		mode,
+		install: mode === "isolated" ? "omp plugin install omp-qol-plugin" : "already-present live user plugin (no install)",
 		isolatedRoot: mode === "isolated" ? isolatedRoot : null,
 		copied: evidence.isolationCopied,
 		scratchConfigYml: SCRATCH_CONFIG_YML,

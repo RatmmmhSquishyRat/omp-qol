@@ -11,12 +11,8 @@ omp plugin install omp-qol-plugin
 `omp install omp-qol-plugin` is the same command. Settings, list, and
 uninstall all use the package name `omp-qol-plugin`.
 
-The first publish tag is `v0.3.1`. Do not reuse `v0.3.0`: that tag
-points at a commit with no workflows. The first Actions publish got
-as far as Sigstore provenance, then npm returned 403 (automation
-token must be a granular access token with bypass 2FA, or the
-package must have a trusted publisher). Re-run the Release workflow
-on `v0.3.1` after that is in place.
+The published package is `omp-qol-plugin@0.3.1`. Do not reuse tag
+`v0.3.0`: that tag points at a commit with no workflows.
 
 `--scope project` is marketplace-only in omp 17.3.4. Passing it with this
 npm spec prints a warning and still writes `~/.omp/plugins`.
@@ -108,20 +104,22 @@ test/host-bridge.test.ts # real AgentRegistry edge cases (8 cases)
 test/integration-real-session.test.ts # real host session + scripted model (7 cases)
 ```
 
-## In-repo development install (not the user path)
+## In-repo development install (not a second user path)
 
-The sandbox installer replicates MarketplaceManager project-side artifacts
-under `../test-workspace/.omp/plugins/` and does not write the developer’s
-`~/.omp`. Use it only inside this checkout:
+Tests use the official command inside an isolated config root:
 
 ```powershell
-bun ../.sandbox/install-plugin.ts          # idempotent; re-run after source changes
+bun ../.sandbox/install-plugin.ts --isolated-root .omp-qol-dev
 ```
 
-Then launch omp from `../test-workspace` — `omp plugin list` shows
-`omp-qol-plugin@local (0.3.1) (project)`. Mechanism:
-`../docs/researches/omp-project-scoped-plugins.md` §5.4.
-Official packaging research: `../docs/researches/omp-plugin-packaging-and-distribution-2026-08-15-redo.md`.
+That is `omp plugin install omp-qol-plugin` with `PI_CONFIG_DIR=.omp-qol-dev`.
+Unpublished local edits: add `--from-source` (`omp plugin install ../plugin`).
+Do not copy `src` into `test-workspace/.omp/plugins` as the default.
+
+While a live session is using `test-workspace/`, do not rewrite that
+folder’s `.omp` tree. After sessions end, the next intentional install
+is the official user command (writes `~/.omp/plugins`). Official
+packaging research: `../docs/researches/omp-plugin-packaging-and-distribution-2026-08-15-redo.md`.
 
 ## Plugin settings
 
@@ -144,11 +142,11 @@ Full pyramid (see the delivery test plan for exact commands):
 bun run typecheck                              # tsc -p tsconfig.plugin.json (plugin src only)
 bun ../.sandbox/link-dev-deps.ts               # one-time: monorepo junctions for the integration tests
 bun run test                                   # 118 cases, single process (pid-scoped isolation preload)
-bun ../.sandbox/install-plugin.ts              # refresh delivery artifacts
-bun ../.sandbox/registry-probe.ts              # runtime + UI registry dual assertion
-bun ../.sandbox/verify-workspace.ts            # delivery-form RPC dumpTools (also --control / --source)
-bun ../.sandbox/e2e-workspace-mode.ts          # real LLM drives ALL 5 mode ops
-bun ../.sandbox/e2e-workspace-advisor.ts       # L6: scripted CRUD + multi-advisor real-traffic acceptance (isolated config root; artifacts under ../.sandbox/e2e-artifacts/)
+bun ../.sandbox/install-plugin.ts --isolated-root .omp-qol-dev
+bun ../.sandbox/registry-probe.ts --isolated-root .omp-qol-dev
+bun ../.sandbox/verify-workspace.ts --isolated-root .omp-qol-dev
+bun ../.sandbox/e2e-workspace-mode.ts          # real LLM; isolated official install (do not run against live test-workspace)
+bun ../.sandbox/e2e-workspace-advisor.ts       # L6: isolated official install + scratch git workspaces
 ```
 
 ## Development notes

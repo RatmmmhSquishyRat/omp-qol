@@ -1,7 +1,7 @@
 /**
- * Delivery-form e2e: installed omp, launched from test-workspace (project
- * plugin enablement), relay model. Drives EVERY mode op through a real LLM
- * turn and asserts each streamed tool_execution_end frame:
+ * Delivery-form e2e: installed omp + official npm plugin, isolated config
+ * root. Drives EVERY mode op through a real LLM turn and asserts each
+ * streamed tool_execution_end frame:
  *
  *   status -> plan_enter -> plan_exit -> vibe_enter -> vibe_exit -> status
  *
@@ -12,15 +12,31 @@
  * own vibe toolset and exit must enumerate+kill via the injected
  * VibeListTool/VibeKillTool classes — NOT return VIBE_UNTRUSTED_REGISTRY.
  *
+ * Plugin install: `omp plugin install omp-qol-plugin` into an isolated
+ * PI_CONFIG_DIR. Never writes live ~/.omp or test-workspace/.omp.
+ *
  * Usage: bun .sandbox/e2e-workspace-mode.ts
  * Exit: 0 pass, 1 fail, 2 harness error.
  */
 
+import * as fs from "node:fs/promises";
+import * as os from "node:os";
 import * as path from "node:path";
+import {
+	gitInitScratch,
+	resolveIsolation,
+	runOfficialInstall,
+	seedIsolatedAgentDir,
+} from "./lib/official-install.ts";
 
-const root = path.resolve(import.meta.dir, "..");
-const workspace = path.join(root, "test-workspace");
 const stderrLog = path.join(import.meta.dir, "e2e-workspace-mode.stderr.log");
+const runStamp = new Date();
+const runId =
+	`${runStamp.getFullYear()}${String(runStamp.getMonth() + 1).padStart(2, "0")}${String(runStamp.getDate()).padStart(2, "0")}` +
+	`-${String(runStamp.getHours()).padStart(2, "0")}${String(runStamp.getMinutes()).padStart(2, "0")}${String(runStamp.getSeconds()).padStart(2, "0")}`;
+const isolatedRootName = `.omp-qol-e2e-mode-${runId}`;
+const isolatedRoot = path.join(os.homedir(), isolatedRootName);
+const workspace = path.join(import.meta.dir, "scratch", `e2e-mode-ws-${runId}`);
 
 // The relay-provider pool is personal configuration, not project content:
 // supply it at run time via OMPQOL_RELAY_PROVIDERS (comma/space separated,
@@ -30,6 +46,16 @@ if (relayProviders.length === 0) {
 	console.error("[e2e-mode] set OMPQOL_RELAY_PROVIDERS=<provider1,provider2,...> to run the real-LLM e2e");
 	process.exit(2);
 }
+
+const isolation = resolveIsolation({ isolatedRoot: isolatedRootName });
+await seedIsolatedAgentDir(isolatedRoot, path.join(os.homedir(), ".omp"), ["# omp-qol mode e2e bootstrap", "setupVersion: 1", ""].join("\n"));
+const installed = runOfficialInstall(isolation);
+if (installed.status !== 0) {
+	console.error(`[e2e-mode] official install failed (${installed.status}): ${installed.stderr || installed.stdout}`);
+	process.exit(2);
+}
+console.log(`[e2e-mode] official install: omp plugin install ${installed.spec} → ${isolation.pluginsDir}`);
+await gitInitScratch(workspace, "omp-qol mode e2e scratch — plugin comes from isolated official npm install\n");
 
 interface Step {
 	op: string;
@@ -51,7 +77,7 @@ const proc = Bun.spawn(["omp", "--mode", "rpc"], {
 	stdin: "pipe",
 	stdout: "pipe",
 	stderr: Bun.file(stderrLog),
-	env: { ...process.env }, // user's real credentials/config; no overrides
+	env: isolation.env,
 });
 
 const timeout = setTimeout(() => {
@@ -222,5 +248,7 @@ if (verdict === undefined) {
 	process.exit(1);
 }
 for (const c of captured) console.log(`[e2e-mode] op ${c.op}: ${c.raw.slice(0, 220)}`);
+await fs.rm(isolatedRoot, { recursive: true, force: true }).catch(() => {});
+await fs.rm(workspace, { recursive: true, force: true }).catch(() => {});
 console.log("[e2e-mode] PASS");
 process.exit(0);

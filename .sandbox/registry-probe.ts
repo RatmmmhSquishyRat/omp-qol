@@ -1,46 +1,57 @@
 /**
- * Registry visibility probe — asserts BOTH independent surfaces the host
- * exposes for plugins (see docs/researches/omp-project-scoped-plugins.md §5.4):
- *   1. RUNTIME: getEnabledPlugins(cwd) — feeds extension loading
- *   2. UI:      <project>/.omp/plugins/installed_plugins.json — feeds
- *               /plugins panel, /plugins + /marketplace installed slash
- *               commands, and CLI `omp plugin list`
- * Both are read with the HOST'S OWN functions.
+ * Official-install visibility probe.
+ *
+ * Asserts the host CLI npm list surface after `omp plugin install omp-qol-plugin`
+ * into an isolated config root. Does not import host modules (those freeze
+ * PI_CONFIG_DIR at first use). Does not read live ~/.omp or test-workspace/.omp
+ * as the expected install.
+ *
+ * Usage:
+ *   bun .sandbox/registry-probe.ts --isolated-root .omp-qol-<id>
+ *   bun .sandbox/registry-probe.ts --isolated-home <abs-scratch-home>
  */
-import { resolveOrDefaultProjectRegistryPath } from "../../../ref_repos/oh-my-pi/packages/coding-agent/src/discovery/helpers";
-import { getEnabledPlugins } from "../../../ref_repos/oh-my-pi/packages/coding-agent/src/extensibility/plugins/loader";
-import { readInstalledPluginsRegistry } from "../../../ref_repos/oh-my-pi/packages/coding-agent/src/extensibility/plugins/marketplace/registry";
-import path from "node:path";
 
-const cwd = path.resolve(import.meta.dir, "..", "test-workspace");
+import * as fs from "node:fs";
+import * as path from "node:path";
+import {
+	PACKAGE_NAME,
+	listPluginsJson,
+	parseIsolationFlags,
+	resolveIsolation,
+	usageText,
+} from "./lib/official-install.ts";
 
-// ── Surface 1: runtime registry ─────────────────────────────────────────
-const plugins = await getEnabledPlugins(cwd);
-for (const p of plugins) {
-	console.log(`runtime plugin: ${p.name}@${p.version} scope=${p.scope} enabled=${p.enabled}`);
-	console.log(`  path: ${p.path}`);
-	console.log(`  manifest.extensions: ${JSON.stringify(p.manifest.extensions)}`);
-}
-const runtimeOk = plugins.some(p => p.name === "omp-qol-plugin" && p.scope === "project" && p.enabled !== false);
-
-// ── Surface 2: UI installed registry (project scope) ───────────────────
-const registryPath = await resolveOrDefaultProjectRegistryPath(cwd);
-console.log(`project installed registry: ${registryPath}`);
-let uiOk = false;
-if (registryPath) {
-	const reg = await readInstalledPluginsRegistry(registryPath);
-	for (const [id, entries] of Object.entries(reg.plugins)) {
-		for (const e of entries) {
-			console.log(`ui plugin: ${id} v${e.version} scope=${e.scope} enabled=${e.enabled !== false}`);
-			console.log(`  installPath: ${e.installPath}`);
-		}
-	}
-	uiOk = (reg.plugins["omp-qol-plugin@local"] ?? []).some(e => e.scope === "project" && e.enabled !== false);
+const flags = parseIsolationFlags(process.argv.slice(2));
+let isolation;
+try {
+	isolation = resolveIsolation({ isolatedRoot: flags.isolatedRoot, isolatedHome: flags.isolatedHome });
+} catch (err) {
+	console.error(err instanceof Error ? err.message : String(err));
+	if (!flags.isolatedRoot && !flags.isolatedHome) console.error(`\n${usageText()}`);
+	process.exit(2);
 }
 
-if (runtimeOk && uiOk) {
-	console.log("VERDICT: PASS — runtime loadable AND listed in /plugins + `omp plugin list` (project scope)");
+const listed = listPluginsJson(isolation);
+const npm = listed.npm ?? [];
+for (const plugin of npm) {
+	console.log(`npm plugin: ${plugin.name}@${plugin.version} enabled=${plugin.enabled !== false}`);
+	if (plugin.path) console.log(`  path: ${plugin.path}`);
+}
+
+const marketplace = listed.marketplace ?? [];
+if (marketplace.length > 0) {
+	console.log(`marketplace entries: ${marketplace.length} (not the default install story)`);
+}
+
+const npmOk = npm.some(plugin => plugin.name === PACKAGE_NAME && plugin.enabled !== false);
+const modulePath = path.join(isolation.pluginsDir, "node_modules", PACKAGE_NAME, "package.json");
+const fsOk = fs.existsSync(modulePath);
+console.log(`plugins dir: ${isolation.pluginsDir}`);
+console.log(`node_modules package: ${fsOk ? modulePath : "MISSING"}`);
+
+if (npmOk && fsOk) {
+	console.log("VERDICT: PASS — omp-qol-plugin listed as npm plugin under the isolated official install");
 	process.exit(0);
 }
-console.log(`VERDICT: FAIL (runtime=${runtimeOk}, ui=${uiOk})`);
+console.log(`VERDICT: FAIL (npm=${npmOk}, fs=${fsOk})`);
 process.exit(1);

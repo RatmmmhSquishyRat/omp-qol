@@ -1,25 +1,55 @@
 /**
- * Live wiring verification for the delivery form (QOL-001 + QOL-002/003).
+ * Live wiring verification for the delivery form (QOL-001 + QOL-002/003 + QOL-004).
  *
- * Spawns omp with cwd=test-workspace and NO PI_CONFIG_DIR override — the
- * user root stays the global one (untouched), and the plugin must load from
- * the project root `test-workspace/.omp/plugins`. Waits for the RPC ready
- * frame, issues `get_state`, and checks `dumpTools` for the [qol] tools
- * (`goal`, `mode`) plus the model-visible mode-op schema.
+ * Spawns omp against a throwaway scratch cwd with an isolated config root.
+ * The plugin must already be installed by the official command
+ * (`omp plugin install omp-qol-plugin`) into that isolated root, or pass
+ * `--install` to do that first. Never uses live ~/.omp or test-workspace/.omp.
  *
  * Usage:
- *   bun .sandbox/verify-workspace.ts                     # installed host
- *   bun .sandbox/verify-workspace.ts --source            # source-link host
- *   bun .sandbox/verify-workspace.ts --control           # --no-extensions (absent)
- *   bun .sandbox/verify-workspace.ts --source --control
+ *   bun .sandbox/verify-workspace.ts --isolated-root .omp-qol-<id>
+ *   bun .sandbox/verify-workspace.ts --isolated-root .omp-qol-<id> --install
+ *   bun .sandbox/verify-workspace.ts --isolated-home <abs> [--install]
+ *   bun .sandbox/verify-workspace.ts --isolated-root .omp-qol-<id> --control
+ *   bun .sandbox/verify-workspace.ts --isolated-root .omp-qol-<id> --source
  */
 
+import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import {
+	gitInitScratch,
+	parseIsolationFlags,
+	resolveIsolation,
+	runOfficialInstall,
+	usageText,
+} from "./lib/official-install.ts";
 
 const CONTROL = process.argv.includes("--control");
 const SOURCE = process.argv.includes("--source");
+const flags = parseIsolationFlags(process.argv.slice(2));
+
+let isolation;
+try {
+	isolation = resolveIsolation({ isolatedRoot: flags.isolatedRoot, isolatedHome: flags.isolatedHome });
+} catch (err) {
+	console.error(err instanceof Error ? err.message : String(err));
+	if (!flags.isolatedRoot && !flags.isolatedHome) console.error(`\n${usageText()}`);
+	process.exit(2);
+}
+
+if (flags.install) {
+	const installed = runOfficialInstall(isolation, { fromSource: flags.fromSource });
+	if (installed.stdout.trim()) console.log(installed.stdout.trimEnd());
+	if (installed.stderr.trim()) console.error(installed.stderr.trimEnd());
+	if (installed.status !== 0) {
+		console.error(`[verify-workspace] official install failed (${installed.status})`);
+		process.exit(installed.status);
+	}
+}
+
 const root = path.resolve(import.meta.dir, "..");
-const workspace = path.join(root, "test-workspace");
+const scratch = path.join(import.meta.dir, "scratch", `verify-ws-${Date.now()}`);
+await gitInitScratch(scratch, "omp-qol verify scratch — plugin comes from isolated official npm install\n");
 
 const args = ["--mode", "rpc", "--model", "openai/gpt-4o-mini"];
 if (CONTROL) args.push("--no-extensions");
@@ -27,14 +57,16 @@ if (CONTROL) args.push("--no-extensions");
 const defaultSourceCli = path.resolve(root, "..", "..", "ref_repos", "oh-my-pi", "packages", "coding-agent", "src", "cli.ts");
 const sourceCli = SOURCE ? defaultSourceCli : process.env.OMP_SOURCE_CLI;
 const cmd = sourceCli ? ["bun", sourceCli, ...args] : ["omp", ...args];
-console.log(`[verify-workspace] host: ${sourceCli ? `source-link (${sourceCli})` : "installed omp"} (cwd=${workspace})`);
+console.log(
+	`[verify-workspace] host: ${sourceCli ? `source-link (${sourceCli})` : "installed omp"} (cwd=${scratch}, PI_CONFIG_DIR=${isolation.configDirName})`,
+);
 
 const proc = Bun.spawn(cmd, {
-	cwd: workspace,
+	cwd: scratch,
 	stdin: "pipe",
 	stdout: "pipe",
 	stderr: "pipe",
-	env: { ...process.env }, // no PI_CONFIG_DIR: global user root, project-scoped plugin
+	env: isolation.env,
 });
 
 const timeout = setTimeout(() => {
@@ -104,20 +136,15 @@ while (true) {
 				const goalOurs = goal !== undefined && (goal.description ?? "").includes("[qol]");
 				const modeOurs = mode !== undefined && (mode.description ?? "").includes("[qol]");
 				const advisorOurs = advisor !== undefined && (advisor.description ?? "").includes("[qol]");
-				// Model-side schema check: the advertised ops must be visible to the
-				// model. Installed hosts serialize zod into JSON-schema parameters;
-				// the source host may dump parameters differently, so accept ops
-				// present in either surface.
 				const modeHaystack = `${JSON.stringify(mode?.parameters ?? {})} ${mode?.description ?? ""}`;
 				const expectedModeOps = ["plan_enter", "plan_exit", "vibe_enter", "vibe_exit", "status"];
 				const modeSchemaOk = expectedModeOps.every(op => modeHaystack.includes(op));
-				// Advisor: 10 ops must appear in schema or description
 				const advisorHaystack = `${JSON.stringify(advisor?.parameters ?? {})} ${advisor?.description ?? ""}`;
 				const expectedAdvisorOps = ["list", "get", "upsert", "remove", "set_shared", "apply", "enable", "disable", "status", "dump"];
 				const advisorSchemaOk = expectedAdvisorOps.every(op => advisorHaystack.includes(op));
 				verdict = goalOurs && modeOurs && modeSchemaOk && advisorOurs && advisorSchemaOk;
 				console.log(
-					`[verify-workspace] project-scoped load: goal ${goalOurs ? "present [qol]" : "MISSING/UNMARKED"}, mode ${modeOurs ? "present [qol]" : "MISSING/UNMARKED"}, schema ${modeSchemaOk ? "carries all 5 ops" : "MISSING OPS"}, advisor ${advisorOurs ? "present [qol]" : "MISSING/UNMARKED"}, advisor-schema ${advisorSchemaOk ? "carries all 10 ops" : "MISSING OPS"}`,
+					`[verify-workspace] official npm load: goal ${goalOurs ? "present [qol]" : "MISSING/UNMARKED"}, mode ${modeOurs ? "present [qol]" : "MISSING/UNMARKED"}, schema ${modeSchemaOk ? "carries all 5 ops" : "MISSING OPS"}, advisor ${advisorOurs ? "present [qol]" : "MISSING/UNMARKED"}, advisor-schema ${advisorSchemaOk ? "carries all 10 ops" : "MISSING OPS"}`,
 				);
 			}
 			break;
@@ -128,5 +155,6 @@ while (true) {
 
 clearTimeout(timeout);
 proc.kill();
+await fs.rm(scratch, { recursive: true, force: true }).catch(() => {});
 console.log(`[verify-workspace] ${CONTROL ? "control" : "qol"} run: ${verdict ? "PASS" : "FAIL"}`);
 process.exit(verdict ? 0 : 1);

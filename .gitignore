@@ -1,8 +1,9 @@
 # dependencies
 node_modules/
 
-# generated delivery artifacts — regenerate with `bun .sandbox/install-plugin.ts`
-# (contains machine-absolute installPath and a Windows junction; never commit)
+# leftover project-local plugin tree from the retired copy/junction installer.
+# Do not refresh this while a live omp session is reading it. After sessions
+# end, official install is `omp plugin install omp-qol-plugin` (user root).
 test-workspace/.omp/
 
 # sandbox runtime noise
