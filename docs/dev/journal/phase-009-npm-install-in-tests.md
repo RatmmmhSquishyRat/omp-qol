@@ -1,6 +1,6 @@
 # Phase 009: Official npm install in tests
 
-**commit**: `3325706` `feat: switch test install to isolated official npm command`
+**commit**: `3325706` `feat: switch test install to isolated official npm command`；`3467ccc` `docs: map official npm test install onto session-001 turn 16`
 **date**: 2026-08-15
 
 ## Problem / Background
