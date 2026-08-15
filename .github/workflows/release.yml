@@ -4,14 +4,20 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
 
 jobs:
   verify:
     name: Verify plugin
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,15 +40,16 @@ jobs:
         run: bun test
 
       - name: Verify tag matches package
-        run: bun .sandbox/check-distribution-metadata.ts --tag ${{ github.ref_name }}
+        env:
+          TAG: ${{ github.ref_name }}
+        run: bun .sandbox/check-distribution-metadata.ts --tag "$TAG"
 
   npm-publish:
     name: Publish npm package
     needs: verify
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
-      # OIDC for npm trusted publisher. NODE_AUTH_TOKEN is the fallback
-      # when trusted publisher is not configured yet.
       id-token: write
       contents: read
     steps:
@@ -68,12 +75,13 @@ jobs:
         working-directory: plugin
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public
+        run: npm publish --provenance --access public
 
   github-release:
     name: GitHub Release
-    needs: verify
+    needs: [verify, npm-publish]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
     steps:
@@ -83,7 +91,5 @@ jobs:
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release create "${{ github.ref_name }}" \
-            --title "${{ github.ref_name }}" \
-            --generate-notes
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" --title "$TAG" --generate-notes

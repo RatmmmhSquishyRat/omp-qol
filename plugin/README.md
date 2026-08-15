@@ -11,9 +11,8 @@ omp plugin install omp-qol-plugin
 `omp install omp-qol-plugin` is the same command. Settings, list, and
 uninstall all use the package name `omp-qol-plugin`.
 
-The first public npm publish has not happened yet. After a human pastes
-`NPM_TOKEN` (or configures npm trusted publisher) and pushes a `v<version>`
-tag, the command above is the official user path.
+The first public version is `0.3.1` (`v0.3.1`). Do not reuse `v0.3.0`:
+that tag points at a commit with no workflows.
 
 `--scope project` is marketplace-only in omp 17.3.4. Passing it with this
 npm spec prints a warning and still writes `~/.omp/plugins`.
@@ -116,7 +115,7 @@ bun ../.sandbox/install-plugin.ts          # idempotent; re-run after source cha
 ```
 
 Then launch omp from `../test-workspace` — `omp plugin list` shows
-`omp-qol-plugin@local (0.3.0) (project)`. Mechanism:
+`omp-qol-plugin@local (0.3.1) (project)`. Mechanism:
 `../docs/researches/omp-project-scoped-plugins.md` §5.4.
 Official packaging research: `../docs/researches/omp-plugin-packaging-and-distribution-2026-08-15-redo.md`.
 

@@ -3,7 +3,7 @@
  *
  * Usage:
  *   bun .sandbox/check-distribution-metadata.ts
- *   bun .sandbox/check-distribution-metadata.ts --tag v0.3.0
+ *   bun .sandbox/check-distribution-metadata.ts --tag v0.3.1
  */
 
 import * as path from "node:path";

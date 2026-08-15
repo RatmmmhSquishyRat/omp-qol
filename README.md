@@ -12,7 +12,7 @@ omp plugin install omp-qol-plugin
 
 `omp install omp-qol-plugin` is the same command. Restart an already-open session (or `/reload-plugins` for skills; restart for tools/extensions). `omp plugin list` should show `omp-qol-plugin@<version>` under npm plugins.
 
-The first public npm publish has not happened yet. The command above works after a human pastes `NPM_TOKEN` (or configures npm trusted publisher) and pushes a `v<version>` tag. Do not treat a failed install before that tag as a reason to add a git marketplace.
+The first public version is `0.3.1` (git tag `v0.3.1`). Do not reuse `v0.3.0`: that tag points at a commit with no workflows, so re-pushing it will not run Release.
 
 Upgrade:
 
