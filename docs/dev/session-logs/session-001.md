@@ -1,7 +1,7 @@
 # Session 001: QOL-004 advisor docs
 
 **date**: 2026-08-15
-**commits**: `dda148b`, `475dfbd`, `49ea863`, `078f686`, `643e513`, `336d0ab`, `8feb59a`, `91f670b`, `bb88788`, `2a47408`, `4f688a2`, `49532a7`, `ca4f512`, `c9af694`, `dc23362`（`336d0ab` 起为 Turn 10–11 rework；`4f688a2`/`49532a7` 为 Turn 12 分发；`ca4f512`/`c9af694` 为 Turn 13 分发重做；`dc23362` 起为 Turn 14 默认 npm publish）
+**commits**: `dda148b`, `475dfbd`, `49ea863`, `078f686`, `643e513`, `336d0ab`, `8feb59a`, `91f670b`, `bb88788`, `2a47408`, `4f688a2`, `49532a7`, `ca4f512`, `c9af694`, `dc23362`, `7e08078`（`336d0ab` 起为 Turn 10–11 rework；`4f688a2`/`49532a7` 为 Turn 12 分发；`ca4f512`/`c9af694` 为 Turn 13 分发重做；`dc23362`/`7e08078` 为 Turn 14 默认 npm publish）
 
 ## Turn 1
 
@@ -461,6 +461,6 @@
 - `NPM_TOKEN` 经管道写入仓库密钥（只确认名字存在）。`v0.3.0` 仍指向无 `.github/` 的 `5392aef`，不 force-move。
 - `bun test` 118/118；typecheck 0；`npm pack --dry-run` 10 文件（src + README + LICENSE + package.json，无 test / 无密钥）。
 
-**commit**: `dc23362`（work：Release 对齐默认实践 / `0.3.1`）
+**commit**: `dc23362`（work：Release 对齐默认实践 / `0.3.1`）、`7e08078`（docs 映射）
 
 

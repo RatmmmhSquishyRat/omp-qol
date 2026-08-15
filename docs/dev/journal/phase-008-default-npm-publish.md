@@ -1,6 +1,6 @@
 # Phase 008: Default GitHub Actions npm publish
 
-**commit**: `dc23362` `fix: align tag release with default npm publish practice`；docs-mapping 见同回合后续 hash
+**commit**: `dc23362` `fix: align tag release with default npm publish practice`；`7e08078` `docs: record default CI/npm publish research and session-001 turn 14`
 **date**: 2026-08-15
 
 ## Problem / Background
