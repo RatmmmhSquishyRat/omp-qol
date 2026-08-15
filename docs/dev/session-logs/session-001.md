@@ -1,7 +1,7 @@
 # Session 001: QOL-004 advisor docs
 
 **date**: 2026-08-15
-**commits**: `dda148b`, `475dfbd`, `49ea863`, `078f686`, `643e513`, `336d0ab`, `8feb59a`, `91f670b`, `bb88788`, `2a47408`, `4f688a2`, `49532a7`, `ca4f512`（`336d0ab` 起为 Turn 10–11 rework；`4f688a2`/`49532a7` 为 Turn 12 分发；`ca4f512` 起为 Turn 13 分发重做）
+**commits**: `dda148b`, `475dfbd`, `49ea863`, `078f686`, `643e513`, `336d0ab`, `8feb59a`, `91f670b`, `bb88788`, `2a47408`, `4f688a2`, `49532a7`, `ca4f512`, `c9af694`（`336d0ab` 起为 Turn 10–11 rework；`4f688a2`/`49532a7` 为 Turn 12 分发；`ca4f512`/`c9af694` 为 Turn 13 分发重做）
 
 ## Turn 1
 
@@ -377,6 +377,6 @@
 - 实现：`publishConfig`、tag 上 `npm-publish` 作业、README 头条改 npm、元数据检查去 catalog。
 - 验证：`bun test` 118/118；typecheck 0；隔离 HOME 下 packed tarball 官方安装列出 `omp-qol-plugin@0.3.0`（npm 段）；`--scope project` 两次均 Ignoring；未写作者 `~/.omp/plugins/package.json`；未 npm publish。
 
-**commit**: `ca4f512`（work：删 catalog / npm 头条 / tag publish 作业）
+**commit**: `ca4f512`（work：删 catalog / npm 头条 / tag publish 作业）、`c9af694`（docs 映射）
 
 

@@ -1,6 +1,6 @@
 # Phase 007: Redo distribution on npm default
 
-**commit**: `ca4f512` `feat: switch default install to npm and add tag publish job`
+**commit**: `ca4f512` `feat: switch default install to npm and add tag publish job`；`c9af694` `docs: remap distribution redo onto npm default and session-001 turn 13`
 **date**: 2026-08-15
 
 ## Problem / Background
