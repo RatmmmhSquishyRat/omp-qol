@@ -1,6 +1,6 @@
 # Phase 013: ICM schema/compress freezes and E3 substrate proof
 
-**commit**: `6f57c47` `docs: freeze ICM overlay schema and compress design, prove substrate at E3`
+**commit**: `6f57c47` `docs: freeze ICM overlay schema and compress design, prove substrate at E3`; `f09521d` `docs: consolidate ICM opening program into SYNTHESIS digest`
 **date**: 2026-08-16
 
 ## Problem / Background
