@@ -22,6 +22,10 @@ So after a seal the pillar is satisfiable in **content** at any time (journal is
 
 Never present sealed and unsealed expand as the same operation. Every `state` / `list` result carries per-block `state` and `exactExpandAvailable`.
 
+## Implementation mapping (overlay-schema T2 — same ratification package)
+
+`overlay-schema.md` models post-seal rehydrate as **`pin.create` (kind `source`/`snapshot`) over the sealed range**, not a new event op: a rehydrated block is exactly a salience re-render from the lossless journal, which is what pin rendering already does. Validation deliberately exempts pin targets from the "range within native active history" rule for this reason (overlay-schema §6.6). Ratifying this proposal ratifies that storage mapping; rejecting it reopens overlay-schema §2/§3.2/§4.6.
+
 ## Cache note
 
 Rehydrate at tail = divergence near the tail (cheap, H3). Branch = full context replay (expensive, explicit).

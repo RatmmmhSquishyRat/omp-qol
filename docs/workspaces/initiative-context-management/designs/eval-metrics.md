@@ -41,6 +41,8 @@ L6 in this repo has already used GLM; include that family in the first billed ru
 
 ## Isolation
 
+**E3-proven nuance (`research/probe-e3-substrate.md`):** `PI_CONFIG_DIR` must be a home-relative directory **name** (e.g. `.omp-qol-e2e-<ts>`), not an absolute path — the host's `DirResolver` joins it onto `os.homedir()` and freezes at first module load, so set it before any host import. Harnesses must also wire the coding-agent `convertToLlm` or compaction summaries silently vanish from the wire.
+
 `PI_CONFIG_DIR=.omp-qol-e2e-cache-<runId>` (the `.omp-qol-` prefix is what `official-install.ts` allows under the live homedir). Credentials only. Do not write live `~/.omp` or live `test-workspace/.omp`.
 
 ## Fail the fixture, not the ranking

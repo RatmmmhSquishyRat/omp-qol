@@ -64,6 +64,25 @@ Only record decisions that are actually taken. Hypotheses stay in `questions/` o
 **why:** D4 — no shipped product matches the pillar. btw dual-inject, ACM head replay, and PR 9097 raw mid-history are the anti-patterns.
 **not closed:** Q7/Q8 still need provider E4/E5. If a host ships native pin, wrap it (ADR-004).
 
+## 2026-08-16 — Overlay event schema: WORKING FREEZE (`designs/overlay-schema.md`)
+
+**decision:** One customType `omp-qol.icm.overlay`; versioned 8-op event union (`compress.create/disable/enable/seal`, `pin.create/update/remove`, `overlay.reset`); plugin-generated `eventId` as idempotency key (verified: `appendEntry` returns `void`, `types.ts:1329`); pure `fold(getBranch())` reducer with the five overlay-engine block states; `shadowed`/`invalid-source` derived per-path, never event-driven; v1 = no active-block overlap, no nesting (recompress = disable + wider block); pins always win visibility; skip-and-warn + `staleSchema` mutation freeze for forward compat; summary durable in-event, ≤64 KiB hard / ≤16 KiB soft.
+**evidence:** Main-agent spot-checks passed: `types.ts:1329` (void return), `runtime-init.ts:83–85` (return discarded), `session-manager.ts:1363–1400` (`fork()` mints new session id at `:1372`, entry ids preserved), block-state names match `overlay-engine.md` exactly.
+**caveats:** T2 — the schema hard-codes the unratified Q4 proposal (seal terminal; post-seal rehydrate modeled as `pin.create` over the sealed range). Those parts inherit Q4's ratification gate. T4 folded into `address-layer.md` as an amendment (sessionId provenance-only).
+**would overturn:** the 8 items in overlay-schema §8.
+
+## 2026-08-16 — ICM substrate E3-PROVEN at runtime (`research/probe-e3-substrate.md`)
+
+**fact:** All three load-bearing hooks pass deterministic runtime probes against the real host 17.3.4 (40/40 checks; re-run by the main agent, exit 0; `bun scripts/icm-substrate-probe.ts` from `plugin/`): (1) `appendEntry` — journaled with stable ids, never on the wire, survives reload, excluded from `buildSessionContext`; (2) `context` — cloned messages with **zero** provenance keys, transformed array is exactly what the model receives, journal untouched; (3) `session_before_compact` — custom `CompactionResult` sealed with `fromExtension:true` + `preserveData`, zero host summarizer calls, `{cancel:true}` aborts cleanly append-only.
+**nuances the probe added:** (a) the hook may return a **different** `firstKeptEntryId` than the host proposed and the host honors it — compress.md's "verbatim, never move the cut" is **our policy, not a host constraint**; (b) H2 "safe to modify" means journal-safe, not wire-inert — a mutated received object that ships in the returned array reaches the wire; (c) test harnesses MUST wire the coding-agent `convertToLlm` (pi-agent-core's default silently drops compaction summaries from the wire — first probe run honestly failed on this); (d) `PI_CONFIG_DIR` is a home-relative directory **name**, not an absolute path.
+**explicitly NOT upgraded (stay E2):** pressure floor math, `session.compacting` hybrid, cross-extension ordering, discovery staging, invalid-id failure mode.
+
+## 2026-08-16 — Compress design accepted with integration fixes (`designs/compress.md`)
+
+**decision:** Closure runs on the reconstructed projection plan mirroring host normalizations (`session-context.ts` dangling-strip / error-turn drop); turn unit = assistant slot + all paired toolResult slots + interrupted-thinking marker; **zero-widening tolerance** (only endpoint swap, typed-id unit resolution, invisible-row inclusion auto-applied; anything adding a visible slot rejects with `suggested`, per U1 — supersedes the 2026-08-09 apply-closure language, T1); `preview` = free discovery; self-footprint scrub = projection-only rewrite of `arguments.summary` → `"[stored in block b:<id>]"` correlated by `(assistantEntryId, toolCallId)`; rendering = one synthetic `user` slot, byte-stable, at first covered slot; seal maturity purely positional, `firstKeptEntryId` verbatim, no-mature → let native run + `session.compacting` hybrid (never cancel-as-policy).
+**integration fixes (conflicts resolved in the schema freeze's favor, marked inline):** (1) no nesting — containment rejects, `b:` endpoints illegal for create, recompress = disable+wider; (2) pins never reject compress — accept + mandatory warning (pins win visibility); (3) straddling blocks fold `shadowed` (schema reducer), not truncated-active (draft T4 overridden).
+**needs author ratification:** T2 — seal gap **verbatim** inlining under a `min(4096 tokens, 20% of region)` budget (plugin-mechanical copying inside an agent-authored summary; over budget → native runs). Fallback if rejected: custom seal only at 100% block coverage.
+
 ## 2026-08-16 — Q4 PROPOSED (not closed): sealed expand = rehydrate default, branch explicit
 
 **proposal:** Pre-seal expand disables the overlay (exact). Post-seal expand defaults to journal-sourced **rehydrate** with `exactExpandAvailable: false` and `alternatives: ["branch"]`. See `designs/sealed-expand.md`.
@@ -76,4 +95,6 @@ Only record decisions that are actually taken. Hypotheses stay in `questions/` o
 - Tool surface names (Q6) — working bet only
 - Public `@N` syntax
 - Provider USD fixture run (Q8)
-- Overlay event schema freeze (draft in flight)
+- Q4-coupled schema parts (seal terminal, rehydrate-as-pin) — ride on Q4 ratification
+- Seal gap verbatim inlining + `min(4096, 20%)` budget (compress T2) — author ratification
+- Compress open items OI-1..OI-8 (`designs/compress.md` §9) — OI-5 (token estimator) waits on the E3 probe

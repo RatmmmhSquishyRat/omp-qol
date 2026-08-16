@@ -408,5 +408,9 @@
 - Updated Q4 in `questions/open-questions.md`, added proposed entry to `DECISIONS.md`, refreshed `TODO.md` / `STATUS.md` blockers.
 - Committed the workspace opening (34 files: control plane + 13 research reports + 7 design drafts + verbatim pillar + gitignore for `docs/ref_repos/`). User-side `docs/researches/` reorganization and `test-workspace/` content left untouched.
 - Launched three background subagents: overlay event schema freeze draft (`designs/overlay-schema.md`), compress closure/scrub/seal design (`designs/compress.md`), and an E3 runtime probe of `appendEntry` / `context` / `session_before_compact` on the real 17.3.4 host under an isolated `PI_CONFIG_DIR`.
+- **Schema landed** → reviewed with three host-source spot-checks (all passed: `appendEntry` void return, `fork()` id preservation, block-state names); accepted as **working freeze**. T2 (rehydrate-as-pin) tied into the Q4 ratification package; T4 folded into `address-layer.md` as the sessionId-provenance-only amendment.
+- **Compress landed** → arbitrated three conflicts with the schema freeze, all in the schema's favor, marked inline as integration fixes: no nesting (containment rejects, `b:` endpoints illegal), pins accept+warn (removed `pinned_conflict`), straddling blocks fold `shadowed` (draft's truncated-active overridden). New ratification item: seal gap verbatim inlining under `min(4096, 20%)` budget.
+- **E3 probe landed** → 40/40 PASS on real host 17.3.4; main agent re-ran the probe personally (exit 0, isolation dirs cleaned, `~/.omp` untouched). Key nuances recorded in DECISIONS: movable `firstKeptEntryId` is capability not constraint; context-clone mutation is journal-safe but wire-visible; harnesses must wire coding-agent `convertToLlm`; `PI_CONFIG_DIR` is a home-relative name.
+- Updated DECISIONS (+3 entries), STATUS (only gate left: author ratification package), TODO, designs index, `eval-metrics.md` isolation nuance.
 
-**commit**: `7bee9cc`
+**commit**: `7bee9cc`, `<batch2>`

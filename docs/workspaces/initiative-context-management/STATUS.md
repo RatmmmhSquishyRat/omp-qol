@@ -60,4 +60,11 @@ Opening fan-out is complete. Tool shape and sealed expand remain working bets, n
 
 ## Blockers for implementation
 
-Host facts are closed. Sealed-expand has a **proposed** default (`designs/sealed-expand.md`, needs author ratification). Remaining before code: overlay event schema freeze (draft in flight), compress closure spec (draft in flight), and an E3 runtime probe of the three load-bearing hooks. Tool-shape and pin defaults are working bets, not freezes.
+Host facts are closed and the substrate is **E3-proven at runtime** (`research/probe-e3-substrate.md`: appendEntry / context / session_before_compact, 40/40 on 17.3.4, reproducible via `bun scripts/icm-substrate-probe.ts`). Overlay event schema is a **working freeze** (`designs/overlay-schema.md`). Compress design is accepted with integration fixes (`designs/compress.md`).
+
+The only gate left before implementation planning is the **author ratification package**:
+1. Q4 sealed-expand — rehydrate default / branch explicit (`designs/sealed-expand.md`);
+2. the schema's rehydrate-as-pin storage mapping (overlay-schema T2, same package);
+3. seal gap verbatim inlining under `min(4096, 20%)` budget (compress T2).
+
+Tool-shape (Q6) and pin defaults (Q7/Q8) remain working bets — they gate naming/rendering details, not the architecture. Next after ratification: TDD matrix + implementation plan for the overlay engine (Phase 4).

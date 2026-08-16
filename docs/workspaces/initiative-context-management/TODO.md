@@ -31,9 +31,9 @@ Legend: **P0** architecture, **P1** primitive implementation, **P2** tree/eval s
 - [x] Address strategy: hybrid — persist entryId, alias from `getBranch()`
 - [x] v1 product target C (D is migration, not a v1 host patch)
 - [x] Sealed expand semantics — PROPOSED in `designs/sealed-expand.md`, needs author ratification
-- [ ] Freeze overlay event schema and non-overlap/shadow rules (draft subagent in flight → `designs/overlay-schema.md`)
-- [ ] Define protocol-safe closure + rejection UX (draft subagent in flight → `designs/compress.md`)
-- [ ] E3 substrate probe: appendEntry / context / before_compact on real host (in flight → `research/probe-e3-substrate.md`)
+- [x] Freeze overlay event schema and non-overlap/shadow rules — `designs/overlay-schema.md`, working freeze after main-agent review; Q4-coupled parts await ratification
+- [x] Define protocol-safe closure + rejection UX — `designs/compress.md` (10-step closure, zero-widening tolerance, 13-reason reject catalog); integration-fixed to the schema freeze
+- [x] E3 substrate probe — 40/40 PASS on host 17.3.4, main-agent re-run confirmed (`research/probe-e3-substrate.md`, `plugin/scripts/icm-substrate-probe.ts`)
 - [ ] Define agent-facing tool shape (working bet in `designs/agent-ux.md`; freeze after schema)
 
 ## P1 — after P0 close

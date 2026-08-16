@@ -17,6 +17,7 @@ Each track writes one report under its folder. Reports must cite file paths and 
 | E1 | [`cache-cost.md`](./cache-cost.md) | Provider cache economics and how to measure in OMP — **done** @ host `de6b7974a0`, docs 2026-08-16 |
 | U1 | [`agent-ux.md`](./agent-ux.md) | Tool/prompt/output lessons from DCP transcripts + current QOL tools — **done** (recommend, not freeze) |
 | I1 | `ingest-2026-08-09.md` | Claim-by-claim inherit / re-verify / overturn matrix |
+| P1 | [`probe-e3-substrate.md`](./probe-e3-substrate.md) | E3 runtime probe of `appendEntry` / `context` / `session_before_compact` — **done**, 3/3 PASS @ host 17.3.4, probe at `plugin/scripts/icm-substrate-probe.ts` |
 
 ## Source policy
 

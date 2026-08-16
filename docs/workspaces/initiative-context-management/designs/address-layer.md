@@ -23,6 +23,8 @@ interface RangeAddress {
 
 Never persist context-array indexes, `m0001` aliases, or `@12` numbers.
 
+**Amendment 2026-08-16 (from `overlay-schema.md` §5, T4):** `sessionId` is stored as **provenance only — never a resolution/filter key**. Host `fork()` copies all entries verbatim with the same entry ids and mints only a new session id (`session-manager.ts:1363–1400`, verified: `mintSessionId()` at `:1372`, entries untouched). Keying on `sessionId` would orphan every address after a fork. Resolution keys on `entryId` within the current session file; a sessionId mismatch yields a provenance note, not a rejection.
+
 ## How the plugin sees entries
 
 Do **not** recover identity from `context` event messages. Those are `structuredClone`d `AgentMessage[]` with no `entryId`.
