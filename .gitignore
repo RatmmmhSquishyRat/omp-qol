@@ -13,6 +13,9 @@ test-workspace/.omp/
 # CI / local vendor checkout of the host (never commit)
 .vendor/
 
+# reference clones for long-running research (never commit)
+docs/ref_repos/
+
 # editor / OS noise
 .DS_Store
 Thumbs.db
