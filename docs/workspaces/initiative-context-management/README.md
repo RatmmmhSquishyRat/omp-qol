@@ -32,6 +32,7 @@ ADR-004 (thin driver, no emulation) still applies to **host-owned** surfaces. It
 
 ## Start here
 
+0. `SYNTHESIS.md` — consolidated digest of the whole opening program (read first)
 1. `INVARIANTS.md` — laws that cannot be silently rewritten
 2. `WORKFLOW.md` — how this workspace operates
 3. `STATUS.md` — what is known / open / blocked
