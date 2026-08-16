@@ -1,7 +1,7 @@
 # Session 005: initiative-context-management workspace
 
 **date**: 2026-08-16
-**commits**:
+**commits**: `7bee9cc`
 
 ## Turn 1
 
@@ -395,3 +395,18 @@
 - Read host `Usage`, `SessionStatsTracker`, `AdvisorStats`, `calculateCost`, `AppendOnlyContextManager`, and existing advisor L6 isolation (`PI_CONFIG_DIR=.omp-qol-e2e-*`, credentials only).
 - Retrieved 2026-08-16 official cache docs: Anthropic (5m/1h, 1.25×/2× write, 0.1× read), OpenAI Responses (GPT-5.6+ 1.25× write / 30m TTL; earlier free writes), DeepSeek (hit/miss, no write; peak rates from 16:00 UTC today), Z.AI GLM cached input.
 - Wrote E1 `research/cache-cost.md`. Cited H3 for digest details; did not edit pillars or product code.
+
+## Turn 10
+
+### User
+
+> continue
+
+### Agent Actions
+
+- Drafted Q4 sealed-expand proposal (`designs/sealed-expand.md`): pre-seal = overlay-disable (exact); post-seal default = journal rehydrate with `exactExpandAvailable: false`; branch as explicit escape. Pillar tension surfaced, marked NEEDS AUTHOR RATIFICATION — not silently closed.
+- Updated Q4 in `questions/open-questions.md`, added proposed entry to `DECISIONS.md`, refreshed `TODO.md` / `STATUS.md` blockers.
+- Committed the workspace opening (34 files: control plane + 13 research reports + 7 design drafts + verbatim pillar + gitignore for `docs/ref_repos/`). User-side `docs/researches/` reorganization and `test-workspace/` content left untouched.
+- Launched three background subagents: overlay event schema freeze draft (`designs/overlay-schema.md`), compress closure/scrub/seal design (`designs/compress.md`), and an E3 runtime probe of `appendEntry` / `context` / `session_before_compact` on the real 17.3.4 host under an isolated `PI_CONFIG_DIR`.
+
+**commit**: `7bee9cc`
