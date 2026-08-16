@@ -1,7 +1,7 @@
 # Session 005: initiative-context-management workspace
 
 **date**: 2026-08-16
-**commits**: `7bee9cc`, `fbb80c7`, `6f57c47`, `b182344`, `f09521d`, `13b58b5`
+**commits**: `7bee9cc`, `fbb80c7`, `6f57c47`, `b182344`, `f09521d`, `13b58b5`, `41bcdc9`
 
 ## Turn 1
 
@@ -441,3 +441,5 @@
 - Remaining unsaved: `docs/researches/` topic-folder move (11 tracked files deleted at old paths, same files untracked under `dcp/` / `goal-plan-vibe/` / `inline-branch/` / `ops/` / `performance/`, plus one new DCP supplement); `WATCHDOG.yml`; small `test-workspace/demo-mini-app/`.
 - Left out on purpose: `.sandbox/e2e-artifacts/` (runtime frames); `test-workspace/mc-web/` (nested independent git repo, not swallowed into this tree).
 - Committed the researches reorganization + watchdog + demo + this turn, then pushed.
+
+**commit**: `41bcdc9`
