@@ -1,0 +1,1 @@
+This is a dependency-free static OMP QOL banner demo: run `node gen.mjs` in this directory to generate `banner.txt`, then view it by opening `index.html` or serving this directory with any static file server.

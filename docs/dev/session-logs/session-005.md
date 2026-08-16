@@ -1,7 +1,7 @@
 # Session 005: initiative-context-management workspace
 
 **date**: 2026-08-16
-**commits**: `7bee9cc`, `fbb80c7`, `6f57c47`, `b182344`, `f09521d`
+**commits**: `7bee9cc`, `fbb80c7`, `6f57c47`, `b182344`, `f09521d`, `13b58b5`
 
 ## Turn 1
 
@@ -428,3 +428,16 @@
 - Committed and pushed; reported the minimal-complete briefing (architecture verdict, E3 proof, ratification package, next steps) to the author.
 
 **commit**: `f09521d`
+
+## Turn 12
+
+### User
+
+> 现在, 对于上述讨论和各种内容进行完整落盘和推送, 确保我们的工作被全部保存
+
+### Agent Actions
+
+- Verified ICM workspace already on `origin/master` at `13b58b5` (SYNTHESIS, designs, research, E3 probe, session/journal mapping).
+- Remaining unsaved: `docs/researches/` topic-folder move (11 tracked files deleted at old paths, same files untracked under `dcp/` / `goal-plan-vibe/` / `inline-branch/` / `ops/` / `performance/`, plus one new DCP supplement); `WATCHDOG.yml`; small `test-workspace/demo-mini-app/`.
+- Left out on purpose: `.sandbox/e2e-artifacts/` (runtime frames); `test-workspace/mc-web/` (nested independent git repo, not swallowed into this tree).
+- Committed the researches reorganization + watchdog + demo + this turn, then pushed.

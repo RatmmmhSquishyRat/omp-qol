@@ -1,0 +1,8 @@
+  OOO  M   M PPP      QQQ  OOO  L
+ O   O MM MM P  P    Q   Q O   O L
+ O   O M M M PPP     Q Q Q O   O L
+ O   O M   M P       Q  QQ O   O L
+  OOO  M   M P        QQQ   OOO  LLLL
+ OMP QOL
+seed: deterministic-omp-qol
+2026-08-15T09:29:49.161Z
