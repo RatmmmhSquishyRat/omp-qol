@@ -1,7 +1,7 @@
 # Session 005: initiative-context-management workspace
 
 **date**: 2026-08-16
-**commits**: `7bee9cc`
+**commits**: `7bee9cc`, `fbb80c7`, `6f57c47`
 
 ## Turn 1
 
@@ -413,4 +413,4 @@
 - **E3 probe landed** → 40/40 PASS on real host 17.3.4; main agent re-ran the probe personally (exit 0, isolation dirs cleaned, `~/.omp` untouched). Key nuances recorded in DECISIONS: movable `firstKeptEntryId` is capability not constraint; context-clone mutation is journal-safe but wire-visible; harnesses must wire coding-agent `convertToLlm`; `PI_CONFIG_DIR` is a home-relative name.
 - Updated DECISIONS (+3 entries), STATUS (only gate left: author ratification package), TODO, designs index, `eval-metrics.md` isolation nuance.
 
-**commit**: `7bee9cc`, `<batch2>`
+**commit**: `7bee9cc`, `6f57c47`
